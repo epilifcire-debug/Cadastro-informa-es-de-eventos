@@ -116,26 +116,31 @@ document.getElementById('btnResetar').addEventListener('click', () => {
   }
 });
 
-// === GERENCIAMENTO DE LOTES (com formatação monetária) ===
+// === FORMATAR MOEDA ===
+function formatarMoeda(valor) {
+  if (!valor) return "R$ 0,00";
+  valor = valor.toString().replace(/[^\d,.-]/g, '').replace(',', '.');
+  const numero = parseFloat(valor) || 0;
+  return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// === GERENCIAMENTO DE LOTES ===
 function gerenciarLotes(id) {
   const evento = eventos.find(e => e.id === id);
   if (!evento) return;
 
-  const setores = prompt('Digite os setores (separados por vírgula):');
-  if (!setores) return;
+  let qtdSetores = parseInt(prompt("Quantas áreas/setores este lote terá? (1 a 5):"));
+  if (isNaN(qtdSetores) || qtdSetores < 1 || qtdSetores > 5) {
+    alert("Digite um número entre 1 e 5!");
+    return;
+  }
 
-  const setoresArray = setores.split(',').map(s => s.trim()).slice(0, 5);
   const lote = { setores: [] };
 
-  // Função interna para formatar valores como moeda
-  const formatarMoeda = (valor) => {
-    if (!valor) return "R$ 0,00";
-    valor = valor.toString().replace(/[^\d,.-]/g, '').replace(',', '.');
-    const numero = parseFloat(valor) || 0;
-    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
+  for (let i = 0; i < qtdSetores; i++) {
+    const setor = prompt(`Nome do setor ${i + 1}:`);
+    if (!setor) continue;
 
-  setoresArray.forEach(setor => {
     let meia, solidario, inteira;
     do { meia = prompt(`Valor MEIA do setor "${setor}" (ex: 50,00):`); } while (!meia);
     do { solidario = prompt(`Valor SOLIDÁRIO do setor "${setor}" (ex: 60,00):`); } while (!solidario);
@@ -149,14 +154,14 @@ function gerenciarLotes(id) {
         inteira: formatarMoeda(inteira)
       }
     });
-  });
+  }
 
   evento.lotes.push(lote);
   salvarLocal();
-  alert('💾 Lote salvo com sucesso!');
+  alert('💾 Lote cadastrado com sucesso!');
 }
 
-// === VISUALIZAR LOTES ===
+// === VISUALIZAR E EDITAR LOTES ===
 function visualizarLotes(id) {
   const evento = eventos.find(e => e.id === id);
   const container = document.getElementById(`lotes-${id}`);
@@ -172,29 +177,53 @@ function visualizarLotes(id) {
   }
 
   container.innerHTML = '';
-  evento.lotes.forEach((lote, index) => {
+  evento.lotes.forEach((lote, indexLote) => {
     const divLote = document.createElement('div');
     divLote.classList.add('lote-card');
 
     let setoresHTML = '';
-    lote.setores.forEach(s => {
+    lote.setores.forEach((s, indexSetor) => {
       setoresHTML += `
         <div class="setor-item">
           <h4>${s.setor}</h4>
-          <p><b>Meia:</b> ${s.valores.meia || '-'}</p>
-          <p><b>Solidário:</b> ${s.valores.solidario || '-'}</p>
-          <p><b>Inteira:</b> ${s.valores.inteira || '-'}</p>
+          <p><b>Meia:</b> ${s.valores.meia}</p>
+          <p><b>Solidário:</b> ${s.valores.solidario}</p>
+          <p><b>Inteira:</b> ${s.valores.inteira}</p>
+          <button onclick="editarSetor(${id}, ${indexLote}, ${indexSetor})">Editar Valores</button>
         </div>
       `;
     });
 
     divLote.innerHTML = `
-      <h3>Lote ${index + 1}</h3>
+      <h3>Lote ${indexLote + 1}</h3>
       ${setoresHTML}
       <hr>
     `;
     container.appendChild(divLote);
   });
+}
+
+// === EDITAR VALORES DE UM SETOR ===
+function editarSetor(idEvento, indexLote, indexSetor) {
+  const evento = eventos.find(e => e.id === idEvento);
+  if (!evento) return;
+
+  const lote = evento.lotes[indexLote];
+  const setor = lote.setores[indexSetor];
+
+  alert(`🛠 Editando valores do setor: ${setor.setor}`);
+
+  const meia = prompt(`Novo valor MEIA (atual: ${setor.valores.meia}):`);
+  const solidario = prompt(`Novo valor SOLIDÁRIO (atual: ${setor.valores.solidario}):`);
+  const inteira = prompt(`Novo valor INTEIRA (atual: ${setor.valores.inteira}):`);
+
+  if (meia) setor.valores.meia = formatarMoeda(meia);
+  if (solidario) setor.valores.solidario = formatarMoeda(solidario);
+  if (inteira) setor.valores.inteira = formatarMoeda(inteira);
+
+  salvarLocal();
+  visualizarLotes(idEvento);
+  alert("✅ Valores atualizados com sucesso!");
 }
 
 // === EDITAR EVENTO (COM MODAL) ===
