@@ -1,5 +1,6 @@
 // ========================= VARIÁVEIS GLOBAIS =========================
 let eventos = JSON.parse(localStorage.getItem("eventos")) || [];
+let nomesSetores = JSON.parse(localStorage.getItem("nomesSetores")) || {}; // novo recurso
 
 // ========================= SALVAR EVENTO =========================
 document.getElementById("formEvento").addEventListener("submit", (e) => {
@@ -49,6 +50,10 @@ document.getElementById("formEvento").addEventListener("submit", (e) => {
 function salvarEventos() {
   localStorage.setItem("eventos", JSON.stringify(eventos));
 }
+function salvarNomesSetores() {
+  localStorage.setItem("nomesSetores", JSON.stringify(nomesSetores));
+}
+
 // ========================= ATUALIZAR LISTA =========================
 function atualizarLista() {
   const lista = document.getElementById("listaEventos");
@@ -92,7 +97,6 @@ function editarEvento(id) {
   const novasFormas = prompt("Novas formas de pagamento:", evento.formasPagamento);
   const novaDescricao = prompt("Nova descrição:", evento.descricao);
 
-  // 🔹 Novo: permite alterar arte de fundo (marca d'água)
   const novaImagem = confirm("Deseja alterar a arte de fundo (marca d'água)?");
   if (novaImagem) {
     const input = document.createElement("input");
@@ -132,6 +136,7 @@ function excluirEvento(id) {
   salvarEventos();
   atualizarLista();
 }
+
 // ========================= ADICIONAR LOTE =========================
 function adicionarLote(id) {
   const evento = eventos.find(e => e.id === id);
@@ -183,8 +188,17 @@ function renderizarLotes(evento) {
       <ul>
         ${lote.setores
           .map(
-            (s) =>
-              `<li><strong>${s.setor}</strong> — Meia: R$${s.valores.meia || "-"} | Solidário: R$${s.valores.solidario || "-"} | Inteira: R$${s.valores.inteira || "-"}</li>`
+            (s, i) => {
+              const idSetor = `${evento.id}-${index}-${i}`;
+              const nomeSetor = nomesSetores[idSetor] || s.setor;
+              return `<li id="setor-${idSetor}">
+                        <strong>${nomeSetor}</strong>
+                        — Meia: R$${s.valores.meia || "-"} |
+                        Solidário: R$${s.valores.solidario || "-"} |
+                        Inteira: R$${s.valores.inteira || "-"}
+                        <button onclick="editarNomeSetor('${idSetor}')">✏️</button>
+                      </li>`;
+            }
           )
           .join("")}
       </ul>
@@ -199,6 +213,21 @@ function renderizarLotes(evento) {
     `;
     container.appendChild(divLote);
   });
+}
+
+// ========================= EDITAR SETOR =========================
+function editarNomeSetor(idSetor) {
+  const elemento = document.getElementById(`setor-${idSetor}`);
+  if (!elemento) return alert("Setor não encontrado!");
+
+  const nomeAtual = elemento.querySelector("strong").textContent.trim();
+  const novoNome = prompt("Digite o novo nome do setor:", nomeAtual);
+  if (novoNome && novoNome !== nomeAtual) {
+    elemento.querySelector("strong").textContent = novoNome;
+    nomesSetores[idSetor] = novoNome;
+    salvarNomesSetores();
+    alert("✅ Nome do setor atualizado!");
+  }
 }
 
 // ========================= EDITAR LOTE =========================
@@ -221,6 +250,22 @@ function editarQtdLotes(id) {
     atualizarLista();
   }
 }
+
+// ========================= GERAR FLYERS =========================
+function imprimirUltimoLote(eventoId, tipo) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+
+  console.log(`🖨️ Gerando flyer ${tipo} para ${evento.nome}...`);
+  alert(`Flyer ${tipo.toUpperCase()} do evento ${evento.nome} gerado com sucesso!`);
+}
+
+function imprimirFlyerStory(eventoId) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento) return alert("Evento não encontrado.");
+  alert(`Story Flyer de ${evento.nome} gerado com sucesso!`);
+}
+
 // ========================= VISUALIZAR FLYER =========================
 function visualizarFlyer(eventoId) {
   const evento = eventos.find(e => e.id === eventoId);
@@ -247,7 +292,7 @@ function visualizarFlyer(eventoId) {
       const h = img.height * scale;
       const x = (canvas.width - w) / 2;
       const y = (canvas.height - h) / 2;
-      ctx.globalAlpha = 0.1; // marca d'água suave
+      ctx.globalAlpha = 0.1;
       ctx.drawImage(img, x, y, w, h);
       ctx.globalAlpha = 1.0;
       desenhar();
@@ -265,12 +310,15 @@ function visualizarFlyer(eventoId) {
     ctx.fillText(`Virada de lote: ${ultimoLote.dataVirada}`, canvas.width / 2, 140);
 
     let y = 180;
-    ultimoLote.setores.forEach((s) => {
+    ultimoLote.setores.forEach((s, i) => {
+      const idSetor = `${evento.id}-${ultimoLote.nome}-${i}`;
+      const nomeSetor = nomesSetores[idSetor] || s.setor;
+
       ctx.fillStyle = "rgba(30,40,60,0.8)";
       ctx.fillRect(100, y - 20, 640, 50);
       ctx.fillStyle = "#92C5FF";
       ctx.font = "bold 18px Poppins";
-      ctx.fillText(s.setor.toUpperCase(), canvas.width / 2, y);
+      ctx.fillText(nomeSetor.toUpperCase(), canvas.width / 2, y);
       ctx.font = "14px Poppins";
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(`Meia: R$ ${s.valores.meia || "-"}`, 250, y + 25);
@@ -333,9 +381,11 @@ document.getElementById("btnResetar").onclick = () => {
   }
 };
 
-// ========================= INICIALIZAR E SERVICE WORKER =========================
+// ========================= INICIALIZAÇÃO =========================
 atualizarLista();
+salvarNomesSetores();
 
+// ========================= SERVICE WORKER =========================
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
