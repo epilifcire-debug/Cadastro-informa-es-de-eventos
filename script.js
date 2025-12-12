@@ -1,14 +1,23 @@
 // ===================== UTILITÁRIOS =====================
 
 function carregarEventos() {
-  return JSON.parse(localStorage.getItem("eventos")) || [];
+  try {
+    return JSON.parse(localStorage.getItem("eventos")) || [];
+  } catch (e) {
+    console.warn("⚠️ Dados corrompidos no localStorage. Resetando...");
+    localStorage.removeItem("eventos");
+    return [];
+  }
 }
+
 function salvarEventos(e) {
   localStorage.setItem("eventos", JSON.stringify(e));
 }
+
 function getPagamento(e) {
   return e.pagamento || e.formasPagamento || "Não informado";
 }
+
 function formatarDataSimples(data) {
   if (!data) return "Não definida";
   const d = new Date(data);
@@ -35,7 +44,7 @@ function definirViradaLote(idEvento) {
   ev.viradaData = novaData;
   ev.loteAtualizado = false;
   salvarEventos(eventos);
-  playSound("success");
+  playSound?.("success");
   renderEventos();
   alert("✅ Data de virada salva!");
 }
@@ -47,16 +56,19 @@ function marcarLoteAtualizado(idEvento) {
 
   ev.loteAtualizado = true;
   salvarEventos(eventos);
-  playSound("success");
-  const resp = confirm(
-    "✅ Lote marcado como atualizado!\nDeseja definir nova data?"
-  );
+  playSound?.("success");
+  const resp = confirm("✅ Lote marcado como atualizado!\nDeseja definir nova data?");
   if (resp) definirViradaLote(idEvento);
   else renderEventos();
 }
 
 // ===================== PDF (ÚLTIMO LOTE) =====================
 async function baixarPDFUltimoLote(idEvento) {
+  if (!window.jspdf) {
+    alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente em alguns segundos.");
+    return;
+  }
+
   const { jsPDF } = window.jspdf;
   const eventos = carregarEventos();
   const ev = eventos.find((x) => x.id === idEvento);
@@ -90,9 +102,11 @@ async function baixarPDFUltimoLote(idEvento) {
         y = 20;
       }
     });
-  } else doc.text("Nenhum setor cadastrado neste lote.", 10, y);
+  } else {
+    doc.text("Nenhum setor cadastrado neste lote.", 10, y);
+  }
 
-  playSound("success");
+  playSound?.("success");
   doc.save(`${ev.nome}-Ultimo-Lote.pdf`);
 }
 
@@ -102,6 +116,7 @@ function adicionarEvento(e) {
   eventos.push(e);
   salvarEventos(eventos);
 }
+
 function atualizarEvento(ev) {
   const eventos = carregarEventos();
   const i = eventos.findIndex((x) => x.id === ev.id);
@@ -110,11 +125,12 @@ function atualizarEvento(ev) {
     salvarEventos(eventos);
   }
 }
+
 function excluirEvento(id) {
   if (!confirm("Excluir este evento?")) return;
   let e = carregarEventos().filter((x) => x.id !== id);
   salvarEventos(e);
-  playSound("delete");
+  playSound?.("delete");
   renderEventos();
 }
 
@@ -158,11 +174,10 @@ function criarCardEvento(ev) {
   if (ev.loteAtualizado) {
     info.classList.remove("alerta-virada");
     info.classList.add("lote-ok");
-    txt = `✅ Lote atualizado (${
-      ev.viradaData ? formatarDataSimples(ev.viradaData) : "sem data"
-    })`;
+    txt = `✅ Lote atualizado (${ev.viradaData ? formatarDataSimples(ev.viradaData) : "sem data"})`;
   }
   info.textContent = txt;
+
   const btnCheck = document.createElement("button");
   btnCheck.textContent = "✅";
   btnCheck.classList.add("btn-check");
@@ -206,6 +221,7 @@ function criarCardEvento(ev) {
 
 function renderEventos() {
   const lista = document.getElementById("listaEventos");
+  if (!lista) return;
   lista.innerHTML = "";
   const eventos = carregarEventos();
   if (!eventos.length) {
@@ -223,15 +239,12 @@ function editarLoteAtual(idEvento) {
     return alert("Nenhum lote encontrado neste evento.");
 
   const ultimo = ev.lotes[ev.lotes.length - 1];
-  const novoNome = prompt(
-    "Editar nome do lote:",
-    ultimo.nome || "Novo Lote"
-  );
+  const novoNome = prompt("Editar nome do lote:", ultimo.nome || "Novo Lote");
   if (!novoNome) return;
 
   ultimo.nome = novoNome;
   salvarEventos(eventos);
-  playSound("success");
+  playSound?.("success");
   renderEventos();
 }
 
@@ -246,6 +259,7 @@ function exportarBackup() {
   a.download = "backup-eventos.json";
   a.click();
 }
+
 function importarBackup(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -253,7 +267,7 @@ function importarBackup(file) {
       const data = JSON.parse(e.target.result);
       if (!Array.isArray(data)) throw new Error();
       salvarEventos(data);
-      playSound("success");
+      playSound?.("success");
       renderEventos();
       alert("✅ Backup importado com sucesso!");
     } catch {
@@ -262,16 +276,18 @@ function importarBackup(file) {
   };
   reader.readAsText(file);
 }
+
 function limparDados() {
   if (!confirm("Limpar todos os eventos?")) return;
   localStorage.removeItem("eventos");
-  playSound("delete");
+  playSound?.("delete");
   renderEventos();
 }
+
 function resetarSistema() {
   if (!confirm("Isso apagará TUDO. Continuar?")) return;
   localStorage.clear();
-  playSound("delete");
+  playSound?.("delete");
   location.reload();
 }
 
@@ -290,6 +306,7 @@ function abrirModalEdicao(id) {
   document.getElementById("editDescricao").value = ev.descricao || "";
   document.getElementById("modalEditar").style.display = "flex";
 }
+
 function fecharModalEdicao() {
   document.getElementById("modalEditar").style.display = "none";
 }
@@ -306,10 +323,10 @@ document.addEventListener("DOMContentLoaded", () => {
         id: Date.now(),
         nome: nomeEvento.value.trim(),
         data: dataEvento.value,
-        classificacao: classificacao.value.trim(),
-        local: localEvento.value.trim(),
-        formasPagamento: formasPagamento.value.trim(),
-        descricao: descricao.value.trim(),
+        classificacao: classificacao.value.trim() || "Livre",
+        local: localEvento.value.trim() || "Não informado",
+        formasPagamento: formasPagamento.value.trim() || "Não informado",
+        descricao: descricao.value.trim() || "",
         lotes: [],
         viradaData: null,
         loteAtualizado: false,
@@ -317,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!evento.nome || !evento.data)
         return alert("Preencha nome e data.");
       adicionarEvento(evento);
-      playSound("success");
+      playSound?.("success");
       formEvento.reset();
       renderEventos();
     });
@@ -337,19 +354,28 @@ document.addEventListener("DOMContentLoaded", () => {
       ev.pagamento = ev.formasPagamento;
       ev.descricao = editDescricao.value.trim();
       salvarEventos(eventos);
-      playSound("success");
+      playSound?.("success");
       fecharModalEdicao();
       renderEventos();
     });
 
-  cancelarEdicao.addEventListener("click", fecharModalEdicao);
-  btnExportar.addEventListener("click", exportarBackup);
-  btnImportar.addEventListener("click", () => {
-    if (!importarBackupInput.files.length)
-      return alert("Selecione um arquivo JSON.");
-    importarBackup(importarBackupInput.files[0]);
-  });
-  btnLimpar.addEventListener("click", limparDados);
-  btnResetar.addEventListener("click", resetarSistema);
+  // Botões com segurança
+  const cancelar = document.getElementById("cancelarEdicao");
+  const exportar = document.getElementById("btnExportar");
+  const importar = document.getElementById("btnImportar");
+  const limpar = document.getElementById("btnLimpar");
+  const resetar = document.getElementById("btnResetar");
+
+  if (cancelar) cancelar.addEventListener("click", fecharModalEdicao);
+  if (exportar) exportar.addEventListener("click", exportarBackup);
+  if (importar)
+    importar.addEventListener("click", () => {
+      const input = document.getElementById("importarBackupInput");
+      if (!input.files.length) return alert("Selecione um arquivo JSON.");
+      importarBackup(input.files[0]);
+    });
+  if (limpar) limpar.addEventListener("click", limparDados);
+  if (resetar) resetar.addEventListener("click", resetarSistema);
+
   renderEventos();
 });
