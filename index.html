@@ -1,41 +1,46 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>App de Cadastro de Evento</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0A0F1A">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0A0F1A" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
+  <!-- SPLASH -->
+  <div id="splash">
+    <img src="img/logo.png" alt="Logo" id="splash-logo" />
+    <h2 id="splash-text">Carregando...</h2>
+  </div>
+
   <header>
-    <img src="img/logo.png" alt="Logo" class="logo">
+    <img src="img/logo.png" alt="Logo" class="logo" />
     <h1>App de Cadastro de Evento</h1>
     <button id="themeToggle">☀️ Modo Claro</button>
   </header>
 
   <main>
-    <!-- FORMULÁRIO DE EVENTO -->
     <section class="card">
       <h2>Cadastrar Novo Evento</h2>
       <form id="formEvento">
         <label>Nome do Evento</label>
-        <input type="text" id="nomeEvento" required>
+        <input type="text" id="nomeEvento" required />
 
         <label>Data do Evento</label>
-        <input type="date" id="dataEvento" required>
+        <input type="date" id="dataEvento" required />
 
         <label>Classificação</label>
-        <input type="text" id="classificacao">
+        <input type="text" id="classificacao" />
 
         <label>Local</label>
-        <input type="text" id="localEvento">
+        <input type="text" id="localEvento" />
 
         <label>Formas de Pagamento</label>
-        <input type="text" id="formasPagamento" placeholder="Pix, Cartão, Dinheiro...">
+        <input type="text" id="formasPagamento" placeholder="Pix, Cartão, Dinheiro..." />
 
         <label>Descrição</label>
         <textarea id="descricao"></textarea>
@@ -44,43 +49,38 @@
       </form>
     </section>
 
-    <!-- LISTAGEM -->
     <section class="card">
       <h2>Eventos Cadastrados</h2>
       <div id="listaEventos"></div>
     </section>
 
-    <!-- BACKUP -->
     <section class="card">
       <h2>Backup & Restauração</h2>
       <button id="btnExportar">Exportar Backup</button>
-      <input type="file" id="importarBackup" accept=".json">
+      <input type="file" id="importarBackup" accept=".json" />
       <button id="btnImportar">Importar Backup</button>
       <button id="btnLimpar">Limpar Dados</button>
       <button id="btnResetar" class="btn-resetar">Resetar Sistema</button>
     </section>
   </main>
 
-  <footer>
-    <p>Desenvolvido por Eric Filipe</p>
-  </footer>
+  <footer><p>Desenvolvido por Eric Filipe</p></footer>
 
-  <!-- MODAL DE EDIÇÃO -->
   <div id="modalEditar" class="modal">
     <div class="modal-content">
       <h2>Editar Evento</h2>
       <form id="formEditar">
-        <input type="hidden" id="editId">
+        <input type="hidden" id="editId" />
         <label>Nome do Evento</label>
-        <input type="text" id="editNome" required>
+        <input type="text" id="editNome" required />
         <label>Data do Evento</label>
-        <input type="date" id="editData" required>
+        <input type="date" id="editData" required />
         <label>Classificação</label>
-        <input type="text" id="editClassificacao">
+        <input type="text" id="editClassificacao" />
         <label>Local</label>
-        <input type="text" id="editLocal">
+        <input type="text" id="editLocal" />
         <label>Formas de Pagamento</label>
-        <input type="text" id="editPagamento">
+        <input type="text" id="editPagamento" />
         <label>Descrição</label>
         <textarea id="editDescricao"></textarea>
         <div class="modal-buttons">
@@ -91,59 +91,52 @@
     </div>
   </div>
 
-  <!-- MODAL DE LOTE -->
-  <div id="modalLote" class="modal">
-    <div class="modal-content">
-      <h2 id="tituloLote">Cadastrar Novo Lote</h2>
-      <form id="formLote">
-        <label>Nome do Lote</label>
-        <input type="text" id="nomeLote" placeholder="Ex: 1º Lote">
-
-        <label>Quantidade de Setores</label>
-        <input type="number" id="qtdSetores" min="1" max="5" value="1">
-
-        <div id="setoresContainer"></div>
-
-        <div class="modal-buttons">
-          <button type="submit">Salvar Lote</button>
-          <button type="button" id="cancelarLote" class="btn-cancelar">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script src="script.js"></script>
 
-  <!-- ======= Troca de tema corrigida ======= -->
+  <!-- Sons + Tema + Splash + SW -->
   <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const themeButton = document.getElementById("themeToggle");
-    const body = document.body;
+    /* --- Sons --- */
+    const sounds = {
+      click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q=="),
+      pop: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAYAAADAQEAAAAAAAAAAAAAAAAAAgMEBf/EAB0QAAMAAgIDAAAAAAAAAAAAAAABAgMEBQYREjH/2gAMAwEAAhADEAAAAfDULHHCHBLmAzz3zrb0HDL//Z"),
+      success: new Audio("data:audio/mp3;base64,//uQxAARAAABP5bX1pRkAAAF5AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEBAQEBAQAAAAAAAAAAAAAAAwQFAgb/xAAlEAABBAICAwEAAAAAAAAAAAABAAIDEQQFBhITITFRImEy/9oADAMBAAIRAxEAPwB9VRnCQiCMEAvqAQXfVv2UK1F1D0nP//Z"),
+      delete: new Audio("data:audio/mp3;base64,//uQxAARAAABO5bX1pRkAAAF5AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAYAAADAQEAAAAAAAAAAAAAAAAABAUHA//EAB4QAAEEAwEBAAAAAAAAAAAAAAEAAwQFERIhMXGB/9oADAMBAAIRAxEAPwCENgVlBIEAIBVBX7wX3X1iJAZx8AEs9uf//Z")
+    };
+    function playSound(n){const s=sounds[n];if(s){s.currentTime=0;s.volume=0.35;s.play().catch(()=>{});}}
 
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "light") {
-      body.classList.add("light-mode");
-      themeButton.textContent = "🌙 Modo Escuro";
-    } else {
-      themeButton.textContent = "☀️ Modo Claro";
-    }
-
-    themeButton.addEventListener("click", () => {
-      body.classList.toggle("light-mode");
-      const isLight = body.classList.contains("light-mode");
-      themeButton.textContent = isLight ? "🌙 Modo Escuro" : "☀️ Modo Claro";
-      localStorage.setItem("theme", isLight ? "light" : "dark");
+    /* --- Tema --- */
+    document.addEventListener("DOMContentLoaded",()=>{
+      const b=document.body,btn=document.getElementById("themeToggle");
+      const saved=localStorage.getItem("theme");
+      if(saved==="light"){b.classList.add("light-mode");btn.textContent="🌙 Modo Escuro";}
+      btn.addEventListener("click",()=>{
+        b.classList.toggle("light-mode");
+        const l=b.classList.contains("light-mode");
+        btn.textContent=l?"🌙 Modo Escuro":"☀️ Modo Claro";
+        localStorage.setItem("theme",l?"light":"dark");
+        playSound("click");
+        btn.classList.add("animate");
+        setTimeout(()=>btn.classList.remove("animate"),400);
+      });
     });
-  });
-  </script>
 
-  <!-- ======= Service Worker ======= -->
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log("✅ Service Worker registrado"))
-      .catch(err => console.log("❌ Erro ao registrar SW:", err));
-  }
+    /* --- Splash --- */
+    document.addEventListener("DOMContentLoaded",()=>{
+      const splash=document.getElementById("splash");
+      const cards=document.querySelectorAll(".card");
+      setTimeout(()=>{
+        playSound("pop");
+        splash.style.opacity="0";
+        splash.style.visibility="hidden";
+        cards.forEach((c,i)=>setTimeout(()=>c.classList.add("show"),300*i));
+      },2000);
+    });
+
+    /* --- SW --- */
+    if("serviceWorker" in navigator)
+      navigator.serviceWorker.register("sw.js")
+        .then(()=>console.log("✅ Service Worker registrado"))
+        .catch(e=>console.log("❌ Erro SW:",e));
   </script>
 </body>
 </html>
