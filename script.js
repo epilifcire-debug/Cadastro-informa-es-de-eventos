@@ -1,6 +1,7 @@
-// ========================= VARIÁVEIS GLOBAIS =========================
+// ========================= CONFIGURAÇÕES GERAIS =========================
+const MOSTRAR_IMAGEM_FUNDO = false; // ❌ sem arte de fundo nos flyers (troque para true se quiser ativar)
 let eventos = JSON.parse(localStorage.getItem("eventos")) || [];
-let nomesSetores = JSON.parse(localStorage.getItem("nomesSetores")) || {}; // novos nomes de setor
+let nomesSetores = JSON.parse(localStorage.getItem("nomesSetores")) || {};
 
 // ========================= SALVAR EVENTO =========================
 document.getElementById("formEvento").addEventListener("submit", (e) => {
@@ -46,7 +47,7 @@ document.getElementById("formEvento").addEventListener("submit", (e) => {
   }
 });
 
-// ========================= SALVAR LOCALSTORAGE =========================
+// ========================= LOCALSTORAGE =========================
 function salvarEventos() {
   localStorage.setItem("eventos", JSON.stringify(eventos));
 }
@@ -96,27 +97,6 @@ function editarEvento(id) {
   const novoLocal = prompt("Novo local:", evento.local);
   const novasFormas = prompt("Novas formas de pagamento:", evento.formasPagamento);
   const novaDescricao = prompt("Nova descrição:", evento.descricao);
-
-  const novaImagem = confirm("Deseja alterar a arte de fundo (marca d'água)?");
-  if (novaImagem) {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          evento.imagem = ev.target.result;
-          salvarEventos();
-          atualizarLista();
-          alert("✅ Arte atualizada com sucesso!");
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
-  }
 
   evento.nome = novoNome || evento.nome;
   evento.data = novaData || evento.data;
@@ -201,10 +181,10 @@ function renderizarLotes(evento) {
       <div class="lote-buttons">
         <button onclick="editarNomeLote(${evento.id}, ${index})">✏️ Editar Nome</button>
         <button onclick="editarQtdLotes(${evento.id})"># Editar Quantidade</button>
-        <button onclick="imprimirUltimoLote(${evento.id}, 'escuro')">🖤 Flyer Escuro</button>
-        <button onclick="imprimirUltimoLote(${evento.id}, 'claro')">🤍 Versão Clara</button>
+        <button class="hidden" onclick="imprimirUltimoLote(${evento.id}, 'escuro')">🖤 Flyer Escuro</button>
+        <button class="hidden" onclick="imprimirUltimoLote(${evento.id}, 'claro')">🤍 Versão Clara</button>
         <button onclick="imprimirFlyerStory(${evento.id})">📱 Story Flyer</button>
-        <button onclick="visualizarFlyer(${evento.id})">👁️ Visualizar Flyer</button>
+        <button class="hidden" onclick="visualizarFlyer(${evento.id})">👁️ Visualizar Flyer</button>
       </div>
     `;
     container.appendChild(divLote);
@@ -226,28 +206,7 @@ function editarNomeSetor(idSetor) {
   }
 }
 
-// ========================= EDIÇÃO DE LOTES =========================
-function editarNomeLote(id, index) {
-  const evento = eventos.find((e) => e.id === id);
-  const novoNome = prompt("Novo nome do lote:", evento.lotes[index].nome);
-  if (novoNome) {
-    evento.lotes[index].nome = novoNome;
-    salvarEventos();
-    atualizarLista();
-  }
-}
-
-function editarQtdLotes(id) {
-  const evento = eventos.find((e) => e.id === id);
-  const qtd = parseInt(prompt("Nova quantidade de lotes:", evento.lotes.length));
-  if (!isNaN(qtd) && qtd >= 0) {
-    evento.lotes = evento.lotes.slice(0, qtd);
-    salvarEventos();
-    atualizarLista();
-  }
-}
-
-// ========================= GERAR FLYER (PDF) =========================
+// ========================= GERAR FLYERS (PDF sem imagem de fundo) =========================
 async function imprimirUltimoLote(eventoId, tipo) {
   const evento = eventos.find(e => e.id === eventoId);
   if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
@@ -255,7 +214,6 @@ async function imprimirUltimoLote(eventoId, tipo) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("landscape", "px", [842, 595]);
 
-  // Fundo
   if (tipo === "escuro") {
     doc.setFillColor(10, 15, 26);
   } else {
@@ -263,7 +221,6 @@ async function imprimirUltimoLote(eventoId, tipo) {
   }
   doc.rect(0, 0, 842, 595, "F");
 
-  // Título
   doc.setTextColor(tipo === "escuro" ? 255 : 0, tipo === "escuro" ? 255 : 0, tipo === "escuro" ? 255 : 0);
   doc.setFontSize(26);
   doc.text(evento.nome, 421, 60, { align: "center" });
@@ -274,7 +231,6 @@ async function imprimirUltimoLote(eventoId, tipo) {
   doc.setFontSize(14);
   doc.text(`Virada: ${ultimoLote.dataVirada}`, 421, 110, { align: "center" });
 
-  // Setores
   let y = 150;
   ultimoLote.setores.forEach((s) => {
     doc.setDrawColor(200);
@@ -287,8 +243,8 @@ async function imprimirUltimoLote(eventoId, tipo) {
     y += 60;
   });
 
-  // Marca d’água
-  if (evento.imagem) {
+  // ⚠️ Arte de fundo (marca d’água) desativada
+  if (MOSTRAR_IMAGEM_FUNDO && evento.imagem) {
     const img = new Image();
     img.src = evento.imagem;
     await img.decode();
@@ -298,7 +254,7 @@ async function imprimirUltimoLote(eventoId, tipo) {
   doc.save(`${evento.nome}-${tipo}.pdf`);
 }
 
-// ========================= STORY FLYER (PDF VERTICAL) =========================
+// ========================= STORY FLYER =========================
 async function imprimirFlyerStory(eventoId) {
   const evento = eventos.find(e => e.id === eventoId);
   if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
@@ -329,6 +285,14 @@ async function imprimirFlyerStory(eventoId) {
     doc.text(`Inteira: R$${s.valores.inteira || "-"}`, 800, y + 50);
     y += 150;
   });
+
+  // ⚠️ Arte de fundo (marca d’água) desativada
+  if (MOSTRAR_IMAGEM_FUNDO && evento.imagem) {
+    const img = new Image();
+    img.src = evento.imagem;
+    await img.decode();
+    doc.addImage(img, "PNG", 150, 300, 780, 900, "", "NONE", 0.1);
+  }
 
   doc.save(`${evento.nome}-story.pdf`);
 }
