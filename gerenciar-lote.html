@@ -8,28 +8,29 @@
   <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Manifest PWA -->
+  <!-- Manifest e cor do app -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0A0F1A" />
 
-  <!-- jsPDF -->
+  <!-- PDF -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
 <body>
-  <!-- SPLASH -->
+  <!-- Splash Screen -->
   <div id="splash">
-    <img src="img/logo.png" alt="Logo" id="splash-logo" />
+    <img src="https://raw.githubusercontent.com/epilifcire-debug/Cadastro-informa-es-de-eventos/main/img/logo.png" alt="Logo" id="splash-logo" />
     <h2 id="splash-text">Carregando...</h2>
   </div>
 
-  <!-- CABEÇALHO -->
+  <!-- Cabeçalho -->
   <header>
-    <img src="img/logo.png" alt="Logo" class="logo" />
+    <img src="https://raw.githubusercontent.com/epilifcire-debug/Cadastro-informa-es-de-eventos/main/img/logo.png" alt="Logo" class="logo" />
     <h1>Gerenciar Lotes</h1>
     <button id="themeToggle">☀️ Modo Claro</button>
   </header>
 
-  <!-- CONTEÚDO PRINCIPAL -->
+  <!-- Conteúdo principal -->
   <main>
     <section class="card">
       <h2 id="tituloEvento">Evento</h2>
@@ -46,21 +47,20 @@
       <div id="listaSetores"></div>
       <div style="margin-top: 10px;">
         <button id="btnAddSetor">➕ Adicionar Setor</button>
-        <button id="btnSalvarLote">💾 Salvar Lote</button>
+        <button id="btnSalvarLote" class="btn-salvar">💾 Salvar Lote</button>
         <button id="btnPDFLote" class="btn-pdf-ultimo">📄 Gerar PDF (Lote Atual)</button>
-        <button id="btnFecharLote">❌ Fechar</button>
+        <button id="btnFecharLote" class="btn-cancelar">❌ Fechar</button>
       </div>
     </section>
   </main>
 
-  <!-- RODAPÉ -->
+  <!-- Rodapé -->
   <footer>
-    <p>Gerenciador de Lotes | Desenvolvido por <strong>Eric Filipe</strong></p>
+    <p>Gerenciamento de Lotes | Desenvolvido por Eric Filipe</p>
   </footer>
 
-  <!-- SCRIPT PRINCIPAL -->
   <script>
-    // === Sons ===
+    // ====== Sons (opcional) ======
     const sounds = {
       click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q==")
     };
@@ -73,7 +73,7 @@
       }
     }
 
-    // === Tema (modo claro/escuro) ===
+    // ====== Tema (claro/escuro) ======
     document.addEventListener("DOMContentLoaded", () => {
       const btn = document.getElementById("themeToggle");
       const b = document.body;
@@ -91,32 +91,40 @@
       };
     });
 
-    // === Splash (some após 2s) ===
-    window.addEventListener("load", () => {
+    // ====== Splash Screen ======
+    document.addEventListener("DOMContentLoaded", () => {
       const s = document.getElementById("splash");
       setTimeout(() => {
-        s.style.opacity = "0";
-        s.style.visibility = "hidden";
-      }, 2000);
+        if (s) {
+          s.style.opacity = "0";
+          s.style.visibility = "hidden";
+        }
+      }, 1800);
     });
 
-    // === Carregar evento selecionado ===
-    let eventos = JSON.parse(localStorage.getItem("eventos") || "[]");
+    // ====== Carregar dados ======
+    let eventos = [];
+    try {
+      eventos = JSON.parse(localStorage.getItem("eventos")) || [];
+    } catch {
+      eventos = [];
+    }
+
     const idSelecionado = Number(localStorage.getItem("eventoSelecionado")) || 0;
     const evento = eventos.find((e) => e.id === idSelecionado);
 
     if (!evento) {
-      alert("Evento não encontrado. Voltando...");
+      alert("Evento não encontrado.");
       window.location.href = "index.html";
     }
 
-    document.getElementById("tituloEvento").textContent = evento.nome || "Evento";
+    document.getElementById("tituloEvento").textContent = evento?.nome || "Evento não encontrado";
     document.getElementById("dataEvento").textContent =
-      "Data: " + (evento.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
+      "Data: " + (evento?.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
 
     const listaLotes = document.getElementById("listaLotes");
-    const listaSetores = document.getElementById("listaSetores");
     const secaoSetores = document.getElementById("secaoSetores");
+    const listaSetores = document.getElementById("listaSetores");
 
     function salvar() {
       const todos = JSON.parse(localStorage.getItem("eventos")) || [];
@@ -125,10 +133,9 @@
       localStorage.setItem("eventos", JSON.stringify(todos));
     }
 
-    // === Renderização dos Lotes ===
     function renderLotes() {
       listaLotes.innerHTML = "";
-      if (!evento.lotes || evento.lotes.length === 0) {
+      if (!evento.lotes || !evento.lotes.length) {
         listaLotes.innerHTML = "<p>Nenhum lote cadastrado.</p>";
         return;
       }
@@ -145,14 +152,12 @@
       });
     }
 
-    // === Abrir Lote ===
     function abrirLote(i) {
       secaoSetores.style.display = "block";
       listaSetores.innerHTML = "";
       const lote = evento.lotes[i];
       document.getElementById("tituloLote").textContent = "Editando: " + lote.nome;
       listaSetores.dataset.index = i;
-
       (lote.setores || []).forEach((s, idx) => {
         const div = document.createElement("div");
         div.classList.add("setor");
@@ -167,17 +172,6 @@
       });
     }
 
-    // === Adicionar novo lote ===
-    document.getElementById("btnNovoLote").onclick = () => {
-      const nome = prompt("Nome do novo lote:");
-      if (!nome) return;
-      evento.lotes = evento.lotes || [];
-      evento.lotes.push({ nome, setores: [] });
-      salvar();
-      renderLotes();
-    };
-
-    // === Excluir lote ===
     function excluirLote(i) {
       if (!confirm("Excluir este lote?")) return;
       evento.lotes.splice(i, 1);
@@ -185,8 +179,7 @@
       renderLotes();
     }
 
-    // === Adicionar setor ===
-    document.getElementById("btnAddSetor").onclick = () => {
+    function adicionarSetor() {
       const i = Number(listaSetores.dataset.index);
       if (i >= 0) {
         evento.lotes[i].setores = evento.lotes[i].setores || [];
@@ -197,9 +190,8 @@
         salvar();
         abrirLote(i);
       }
-    };
+    }
 
-    // === Remover setor ===
     function removerSetor(idx) {
       const i = Number(listaSetores.dataset.index);
       evento.lotes[i].setores.splice(idx, 1);
@@ -207,8 +199,7 @@
       abrirLote(i);
     }
 
-    // === Salvar Lote ===
-    document.getElementById("btnSalvarLote").onclick = () => {
+    function salvarLote() {
       const i = Number(listaSetores.dataset.index);
       const inputs = listaSetores.querySelectorAll(".setor");
       const setores = [];
@@ -228,14 +219,11 @@
       alert("✅ Lote salvo!");
       secaoSetores.style.display = "none";
       renderLotes();
-    };
+    }
 
-    // === Gerar PDF do Lote Atual ===
-    document.getElementById("btnPDFLote").onclick = async () => {
-      if (!window.jspdf) {
-        alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente.");
-        return;
-      }
+    // PDF do lote atual
+    async function gerarPDFLoteAtual() {
+      if (!window.jspdf) return alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente em alguns segundos.");
       const { jsPDF } = window.jspdf;
       const i = Number(listaSetores.dataset.index);
       if (isNaN(i)) return alert("Nenhum lote aberto.");
@@ -249,41 +237,39 @@
       doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`, 10, 30);
       doc.text(`Lote Atual: ${lote.nome}`, 10, 45);
       let y = 60;
-      if (lote.setores?.length) {
-        lote.setores.forEach((s, idx) => {
-          doc.text(`${idx + 1}. ${s.setor}`, 10, y);
-          doc.text(`Meia: R$ ${s.valores.meia}`, 70, y);
-          doc.text(`Solidário: R$ ${s.valores.solidario}`, 110, y);
-          doc.text(`Inteira: R$ ${s.valores.inteira}`, 160, y);
-          y += 10;
-          if (y > 270) { doc.addPage(); y = 20; }
-        });
-      } else doc.text("Nenhum setor cadastrado.", 10, y);
+      lote.setores?.forEach((s, idx) => {
+        doc.text(`${idx + 1}. ${s.setor}`, 10, y);
+        doc.text(`Meia: R$ ${s.valores.meia}`, 70, y);
+        doc.text(`Solidário: R$ ${s.valores.solidario}`, 110, y);
+        doc.text(`Inteira: R$ ${s.valores.inteira}`, 160, y);
+        y += 10;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
       doc.save(`${evento.nome}-${lote.nome}.pdf`);
+    }
+
+    document.getElementById("btnNovoLote").onclick = () => {
+      const nome = prompt("Nome do novo lote:");
+      if (!nome) return;
+      evento.lotes = evento.lotes || [];
+      evento.lotes.push({ nome, setores: [] });
+      salvar();
+      renderLotes();
     };
 
-    // === Fechar lote ===
-    document.getElementById("btnFecharLote").onclick = () => {
-      secaoSetores.style.display = "none";
-    };
-
-    // === Voltar à tela principal ===
+    document.getElementById("btnAddSetor").onclick = adicionarSetor;
+    document.getElementById("btnSalvarLote").onclick = salvarLote;
+    document.getElementById("btnPDFLote").onclick = gerarPDFLoteAtual;
+    document.getElementById("btnFecharLote").onclick = () => (secaoSetores.style.display = "none");
     document.getElementById("voltar").onclick = () => {
       playSound("click");
       window.location.href = "index.html";
     };
 
-    // Render inicial
     renderLotes();
-  </script>
-
-  <!-- REGISTRO DO SERVICE WORKER -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js")
-        .then(() => console.log("✅ SW ativo em gerenciar-lote.html"))
-        .catch((err) => console.error("❌ Falha ao registrar SW:", err));
-    }
   </script>
 </body>
 </html>
