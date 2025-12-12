@@ -56,8 +56,7 @@ function renderEventos() {
 
 // === EXCLUIR EVENTO ===
 function excluirEvento(id) {
-  const idNum = Number(id);
-  eventos = eventos.filter(e => Number(e.id) !== idNum);
+  eventos = eventos.filter(e => e.id !== id);
   salvarLocal();
   renderEventos();
 }
@@ -67,65 +66,22 @@ function salvarLocal() {
   localStorage.setItem('eventos', JSON.stringify(eventos));
 }
 
-// Render inicial
-renderEventos();
-
-// === BACKUP E RESTAURAÇÃO ===
-document.getElementById('btnExportar').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(eventos, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'backup-eventos.json';
-  link.click();
-});
-
-document.getElementById('btnImportar').addEventListener('click', () => {
-  const file = document.getElementById('importarBackup').files[0];
-  if (!file) return alert('Selecione um arquivo JSON válido.');
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const dados = JSON.parse(e.target.result);
-      if (!Array.isArray(dados)) throw new Error();
-      eventos = dados;
-      salvarLocal();
-      renderEventos();
-      alert('Backup importado com sucesso!');
-    } catch {
-      alert('Erro ao importar arquivo. Certifique-se de que é um JSON válido.');
-    }
-  };
-  reader.readAsText(file);
-});
-
-document.getElementById('btnLimpar').addEventListener('click', () => {
-  if (confirm('Tem certeza que deseja apagar todos os dados locais?')) {
-    localStorage.removeItem('eventos');
-    eventos = [];
-    renderEventos();
-  }
-});
-
-// === RESETAR SISTEMA COMPLETO ===
-document.getElementById('btnResetar').addEventListener('click', () => {
-  if (confirm('⚠️ Deseja realmente RESETAR TODO o sistema? Todos os eventos e lotes serão apagados permanentemente!')) {
-    localStorage.clear();
-    eventos = [];
-    renderEventos();
-    alert('✅ Sistema totalmente resetado!');
-  }
-});
-
 // === GERENCIAMENTO DE LOTES ===
 function gerenciarLotes(id) {
   const evento = eventos.find(e => e.id === id);
   if (!evento) return;
 
+  const nomeLote = prompt('Digite o nome do lote:');
+  if (!nomeLote) return;
+
+  const dataVirada = prompt('Digite a data de virada do lote (AAAA-MM-DD):');
+  if (!dataVirada) return alert('Data de virada é obrigatória!');
+
   const setores = prompt('Digite os setores (separados por vírgula):');
   if (!setores) return;
 
-  const setoresArray = setores.split(',').map(s => s.trim()).slice(0, 5);
-  const lote = { setores: [] };
+  const setoresArray = setores.split(',').map(s => s.trim());
+  const lote = { nome: nomeLote, dataVirada, setores: [], checklist: false };
 
   setoresArray.forEach(setor => {
     const meia = prompt(`Valor MEIA do setor "${setor}"`);
@@ -140,7 +96,7 @@ function gerenciarLotes(id) {
 
   evento.lotes.push(lote);
   salvarLocal();
-  alert('Lote salvo com sucesso!');
+  alert('✅ Lote salvo com sucesso!');
 }
 
 // === VISUALIZAR LOTES ===
@@ -163,6 +119,19 @@ function visualizarLotes(id) {
     const divLote = document.createElement('div');
     divLote.classList.add('lote-card');
 
+    // Aviso de virada de lote
+    const dataAtual = new Date();
+    const dataVirada = new Date(lote.dataVirada);
+    const diasRestantes = Math.ceil((dataVirada - dataAtual) / (1000 * 60 * 60 * 24));
+    let aviso = '';
+    if (diasRestantes <= 0) {
+      aviso = `<p class="aviso-vermelho">⚠️ Lote expirado em ${lote.dataVirada}</p>`;
+    } else if (diasRestantes <= 3) {
+      aviso = `<p class="aviso-vermelho piscando">⚠️ Virada de lote em ${lote.dataVirada}</p>`;
+    } else {
+      aviso = `<p class="aviso-vermelho">⚠️ Virada de lote em ${lote.dataVirada}</p>`;
+    }
+
     let setoresHTML = '';
     lote.setores.forEach(s => {
       setoresHTML += `
@@ -175,16 +144,143 @@ function visualizarLotes(id) {
       `;
     });
 
+    const checkId = `check-${id}-${index}`;
     divLote.innerHTML = `
-      <h3>Lote ${index + 1}</h3>
+      <h3>${lote.nome || `Lote ${index + 1}`}</h3>
+      ${aviso}
       ${setoresHTML}
+      <div class="checklist">
+        <label><input type="checkbox" id="${checkId}" ${lote.checklist ? 'checked' : ''}> Novo lote já cadastrado</label>
+      </div>
+      <div class="lote-buttons">
+        <button onclick="editarNomeLote(${id}, ${index})">Editar Nome</button>
+        <button onclick="editarQtdLotes(${id})">Editar Quantidade</button>
+        <button onclick="imprimirUltimoLote(${id})">Imprimir Último Lote</button>
+      </div>
       <hr>
     `;
     container.appendChild(divLote);
+
+    // Evento de checklist persistente
+    const checkbox = divLote.querySelector(`#${checkId}`);
+    checkbox.addEventListener('change', () => {
+      lote.checklist = checkbox.checked;
+      salvarLocal();
+    });
   });
 }
 
-// === EDITAR EVENTO (COM MODAL) ===
+// === EDITAR NOME DO LOTE ===
+function editarNomeLote(eventoId, loteIndex) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento) return;
+  const novoNome = prompt('Digite o novo nome do lote:');
+  if (!novoNome) return;
+  evento.lotes[loteIndex].nome = novoNome;
+  salvarLocal();
+  renderEventos();
+}
+
+// === EDITAR QUANTIDADE DE LOTES ===
+function editarQtdLotes(eventoId) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento) return;
+  const novaQtd = prompt('Digite a nova quantidade total de lotes:');
+  if (!novaQtd || isNaN(novaQtd)) return alert('Digite um número válido.');
+  evento.qtdLotes = Number(novaQtd);
+  salvarLocal();
+  alert('Quantidade de lotes atualizada!');
+}
+
+// === IMPRIMIR ÚLTIMO LOTE (PDF FLYER) ===
+function imprimirUltimoLote(eventoId) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert('Nenhum lote encontrado.');
+
+  const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(jsPDF => {
+    const { jsPDF: JSPDF } = jsPDF;
+    const doc = new JSPDF();
+
+    doc.setFillColor(10, 15, 26);
+    doc.rect(0, 0, 210, 297, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(66, 165, 245);
+    doc.text(evento.nome, 105, 30, { align: 'center' });
+
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Lote: ${ultimoLote.nome}`, 105, 45, { align: 'center' });
+    doc.text(`Virada em: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
+
+    let y = 70;
+    ultimoLote.setores.forEach(s => {
+      doc.setFontSize(13);
+      doc.setTextColor(146, 197, 255);
+      doc.text(s.setor, 20, y);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 20, y + 8);
+      doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 80, y + 8);
+      doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 8);
+      y += 20;
+    });
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 150, 255);
+    doc.text('Gerado automaticamente pelo sistema de eventos', 105, 280, { align: 'center' });
+
+    doc.save(`Lote_${ultimoLote.nome.replace(/\s+/g, '_')}.pdf`);
+  });
+}
+
+// === BACKUP / IMPORTAÇÃO / RESET ===
+document.getElementById('btnExportar').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(eventos, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'backup-eventos.json';
+  link.click();
+});
+
+document.getElementById('btnImportar').addEventListener('click', () => {
+  const file = document.getElementById('importarBackup').files[0];
+  if (!file) return alert('Selecione um arquivo JSON válido.');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      if (!Array.isArray(dados)) throw new Error();
+      eventos = dados;
+      salvarLocal();
+      renderEventos();
+      alert('Backup importado com sucesso!');
+    } catch {
+      alert('Erro ao importar arquivo.');
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('btnLimpar').addEventListener('click', () => {
+  if (confirm('Tem certeza que deseja apagar todos os dados locais?')) {
+    localStorage.removeItem('eventos');
+    eventos = [];
+    renderEventos();
+  }
+});
+
+document.getElementById('btnResetar').addEventListener('click', () => {
+  if (confirm('⚠️ Deseja realmente RESETAR TODO o sistema?')) {
+    localStorage.clear();
+    eventos = [];
+    renderEventos();
+    alert('✅ Sistema totalmente resetado!');
+  }
+});
+
+// === EDIÇÃO DE EVENTO (MODAL) ===
 const modal = document.getElementById('modalEditar');
 const formEditar = document.getElementById('formEditar');
 const cancelarEdicao = document.getElementById('cancelarEdicao');
@@ -230,3 +326,6 @@ formEditar.addEventListener('submit', (e) => {
 window.addEventListener('click', (e) => {
   if (e.target === modal) modal.style.display = 'none';
 });
+
+// === INICIALIZA ===
+renderEventos();
