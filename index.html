@@ -38,9 +38,12 @@
     <section class="card" id="secaoSetores" style="display:none;">
       <h3 id="tituloLote">Editar Lote</h3>
       <div id="listaSetores"></div>
-      <button id="btnAddSetor">➕ Adicionar Setor</button>
-      <button id="btnSalvarLote">💾 Salvar Lote</button>
-      <button id="btnFecharLote">❌ Fechar</button>
+      <div style="margin-top: 10px;">
+        <button id="btnAddSetor">➕ Adicionar Setor</button>
+        <button id="btnSalvarLote">💾 Salvar Lote</button>
+        <button id="btnPDFLote" class="btn-pdf-ultimo">📄 Gerar PDF (Lote Atual)</button>
+        <button id="btnFecharLote">❌ Fechar</button>
+      </div>
     </section>
   </main>
 
@@ -48,9 +51,8 @@
     <p>Gerenciamento de Lotes | Desenvolvido por Eric Filipe</p>
   </footer>
 
-  <!-- === Script === -->
   <script>
-    // Funções de som (importadas do index principal)
+    // === Sons ===
     const sounds = {
       click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q==")
     };
@@ -59,25 +61,24 @@
       if (sound) { sound.currentTime = 0; sound.volume = 0.35; sound.play().catch(()=>{}); }
     }
 
-    // === Tema claro/escuro ===
+    // === Tema ===
     document.addEventListener("DOMContentLoaded",()=>{
-      const themeButton=document.getElementById("themeToggle");
-      const body=document.body;
+      const btn=document.getElementById("themeToggle"),b=document.body;
       const saved=localStorage.getItem("theme");
-      if(saved==="light"){body.classList.add("light-mode");themeButton.textContent="🌙 Modo Escuro";}
-      themeButton.addEventListener("click",()=>{
-        body.classList.toggle("light-mode");
-        const light=body.classList.contains("light-mode");
-        themeButton.textContent=light?"🌙 Modo Escuro":"☀️ Modo Claro";
-        localStorage.setItem("theme",light?"light":"dark");
+      if(saved==="light"){b.classList.add("light-mode");btn.textContent="🌙 Modo Escuro";}
+      btn.onclick=()=>{
+        b.classList.toggle("light-mode");
+        const l=b.classList.contains("light-mode");
+        btn.textContent=l?"🌙 Modo Escuro":"☀️ Modo Claro";
+        localStorage.setItem("theme",l?"light":"dark");
         playSound("click");
-      });
+      };
     });
 
     // === Splash ===
     document.addEventListener("DOMContentLoaded",()=>{
-      const splash=document.getElementById("splash");
-      setTimeout(()=>{ splash.style.opacity="0"; splash.style.visibility="hidden"; },1500);
+      const s=document.getElementById("splash");
+      setTimeout(()=>{s.style.opacity="0";s.style.visibility="hidden";},1500);
     });
 
     // === Dados ===
@@ -85,17 +86,21 @@
     const idSelecionado = Number(localStorage.getItem("eventoSelecionado"));
     const evento = eventos.find(e => e.id === idSelecionado);
 
-    if(!evento){
-      alert("Evento não encontrado!");
-      window.location.href = "index.html";
-    }
+    if(!evento){alert("Evento não encontrado!");window.location.href="index.html";}
 
     document.getElementById("tituloEvento").textContent = evento.nome;
-    document.getElementById("dataEvento").textContent = "Data: " + (new Date(evento.data).toLocaleDateString("pt-BR"));
+    document.getElementById("dataEvento").textContent = "Data: " + new Date(evento.data).toLocaleDateString("pt-BR");
 
     const listaLotes = document.getElementById("listaLotes");
     const secaoSetores = document.getElementById("secaoSetores");
     const listaSetores = document.getElementById("listaSetores");
+
+    function salvar(){
+      const todos = JSON.parse(localStorage.getItem("eventos")) || [];
+      const idx = todos.findIndex(e => e.id === evento.id);
+      todos[idx] = evento;
+      localStorage.setItem("eventos", JSON.stringify(todos));
+    }
 
     function renderLotes(){
       listaLotes.innerHTML = "";
@@ -103,12 +108,12 @@
         listaLotes.innerHTML = "<p>Nenhum lote cadastrado.</p>";
         return;
       }
-      evento.lotes.forEach((lote, i)=>{
-        const div = document.createElement("div");
+      evento.lotes.forEach((l, i)=>{
+        const div=document.createElement("div");
         div.classList.add("lote-card");
-        div.innerHTML = `
-          <h4>${lote.nome}</h4>
-          <p>${lote.setores?.length || 0} setor(es)</p>
+        div.innerHTML=`
+          <h4>${l.nome}</h4>
+          <p>${l.setores?.length || 0} setor(es)</p>
           <button onclick="abrirLote(${i})">Editar</button>
           <button onclick="excluirLote(${i})" class="btn-cancelar">Excluir</button>
         `;
@@ -117,16 +122,16 @@
     }
 
     function abrirLote(i){
-      secaoSetores.style.display = "block";
-      listaSetores.innerHTML = "";
-      const lote = evento.lotes[i];
-      document.getElementById("tituloLote").textContent = "Editando: " + lote.nome;
-      listaSetores.dataset.index = i;
-      (lote.setores || []).forEach((s, idx)=>{
-        const div = document.createElement("div");
+      secaoSetores.style.display="block";
+      listaSetores.innerHTML="";
+      const lote=evento.lotes[i];
+      document.getElementById("tituloLote").textContent="Editando: "+lote.nome;
+      listaSetores.dataset.index=i;
+      (lote.setores||[]).forEach((s,idx)=>{
+        const div=document.createElement("div");
         div.classList.add("setor");
-        div.innerHTML = `
-          <input type="text" value="${s.setor}" placeholder="Nome do setor">
+        div.innerHTML=`
+          <input type="text" value="${s.setor}" placeholder="Setor">
           <input type="number" value="${s.valores.meia}" placeholder="Meia">
           <input type="number" value="${s.valores.solidario}" placeholder="Solidário">
           <input type="number" value="${s.valores.inteira}" placeholder="Inteira">
@@ -139,76 +144,86 @@
     function excluirLote(i){
       if(!confirm("Excluir este lote?")) return;
       evento.lotes.splice(i,1);
-      salvar();
-      renderLotes();
-    }
-
-    function salvar(){
-      const eventos = JSON.parse(localStorage.getItem("eventos")) || [];
-      const idx = eventos.findIndex(e => e.id === evento.id);
-      eventos[idx] = evento;
-      localStorage.setItem("eventos", JSON.stringify(eventos));
+      salvar(); renderLotes();
     }
 
     function adicionarSetor(){
       const i = Number(listaSetores.dataset.index);
-      if(i >= 0){
+      if(i>=0){
         evento.lotes[i].setores = evento.lotes[i].setores || [];
-        evento.lotes[i].setores.push({
-          setor: "Novo Setor",
-          valores: {meia:0, solidario:0, inteira:0}
-        });
-        salvar();
-        abrirLote(i);
+        evento.lotes[i].setores.push({setor:"Novo Setor",valores:{meia:0,solidario:0,inteira:0}});
+        salvar(); abrirLote(i);
       }
     }
 
     function removerSetor(idx){
       const i = Number(listaSetores.dataset.index);
       evento.lotes[i].setores.splice(idx,1);
-      salvar();
-      abrirLote(i);
+      salvar(); abrirLote(i);
     }
 
     function salvarLote(){
       const i = Number(listaSetores.dataset.index);
       const inputs = listaSetores.querySelectorAll(".setor");
-      const setores = [];
+      const setores=[];
       inputs.forEach(div=>{
-        const [setor, meia, solid, inte] = div.querySelectorAll("input");
+        const [setor,meia,solid,inte]=div.querySelectorAll("input");
         setores.push({
-          setor: setor.value.trim() || "Setor",
-          valores: {
-            meia: Number(meia.value) || 0,
-            solidario: Number(solid.value) || 0,
-            inteira: Number(inte.value) || 0
+          setor:setor.value.trim()||"Setor",
+          valores:{
+            meia:Number(meia.value)||0,
+            solidario:Number(solid.value)||0,
+            inteira:Number(inte.value)||0
           }
         });
       });
-      evento.lotes[i].setores = setores;
+      evento.lotes[i].setores=setores;
       salvar();
-      alert("✅ Lote salvo com sucesso!");
-      secaoSetores.style.display = "none";
+      alert("✅ Lote salvo!");
+      secaoSetores.style.display="none";
       renderLotes();
     }
 
-    document.getElementById("btnNovoLote").onclick = ()=>{
-      const nome = prompt("Nome do novo lote:");
-      if(!nome) return;
-      evento.lotes = evento.lotes || [];
-      evento.lotes.push({ nome, setores: [] });
-      salvar();
-      renderLotes();
+    // === PDF do Lote Atual ===
+    async function gerarPDFLoteAtual(){
+      const {jsPDF}=window.jspdf;
+      const i=Number(listaSetores.dataset.index);
+      if(isNaN(i))return alert("Nenhum lote aberto.");
+      const lote=evento.lotes[i];
+      const doc=new jsPDF();
+      doc.setFont("helvetica","bold");doc.setFontSize(18);
+      doc.text(evento.nome,10,20);
+      doc.setFontSize(12);doc.setFont("helvetica","normal");
+      doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`,10,30);
+      doc.text(`Lote Atual: ${lote.nome}`,10,45);
+      let y=60;
+      doc.setFont("helvetica","normal");
+      if(lote.setores?.length){
+        lote.setores.forEach((s,idx)=>{
+          doc.text(`${idx+1}. ${s.setor}`,10,y);
+          doc.text(`Meia: R$ ${s.valores.meia}`,70,y);
+          doc.text(`Solidário: R$ ${s.valores.solidario}`,110,y);
+          doc.text(`Inteira: R$ ${s.valores.inteira}`,160,y);
+          y+=10;if(y>270){doc.addPage();y=20;}
+        });
+      }else doc.text("Nenhum setor cadastrado neste lote.",10,y);
+      playSound("click");
+      doc.save(`${evento.nome}-${lote.nome}.pdf`);
+    }
+
+    document.getElementById("btnNovoLote").onclick=()=>{
+      const nome=prompt("Nome do novo lote:");
+      if(!nome)return;
+      evento.lotes=evento.lotes||[];
+      evento.lotes.push({nome,setores:[]});
+      salvar(); renderLotes();
     };
 
-    document.getElementById("btnAddSetor").onclick = adicionarSetor;
-    document.getElementById("btnSalvarLote").onclick = salvarLote;
-    document.getElementById("btnFecharLote").onclick = ()=>{
-      secaoSetores.style.display="none";
-    };
-    document.getElementById("voltar").onclick = ()=>{
-      window.location.href = "index.html";
-    };
+    document.getElementById("btnAddSetor").onclick=adicionarSetor;
+    document.getElementById("btnSalvarLote").onclick=salvarLote;
+    document.getElementById("btnPDFLote").onclick=gerarPDFLoteAtual;
+    document.getElementById("btnFecharLote").onclick=()=>secaoSetores.style.display="none";
+    document.getElementById("voltar").onclick=()=>window.location.href="index.html";
 
     renderLotes();
   </script>
