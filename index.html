@@ -33,10 +33,10 @@
       <button id="voltar">⬅️ Voltar</button>
     </section>
 
-    <section class="card" id="secaoSetores" style="display: none;">
+    <section class="card" id="secaoSetores" style="display:none;">
       <h3 id="tituloLote">Editar Lote</h3>
       <div id="listaSetores"></div>
-      <div style="margin-top: 10px;">
+      <div style="margin-top:10px;">
         <button id="btnAddSetor">➕ Adicionar Setor</button>
         <button id="btnSalvarLote">💾 Salvar Lote</button>
         <button id="btnPDFLote" class="btn-pdf-ultimo">📄 Gerar PDF (Lote Atual)</button>
@@ -59,69 +59,76 @@
       if (s) { s.currentTime = 0; s.volume = 0.35; s.play().catch(()=>{}); }
     }
 
-    // === Tema ===
+    // === Tema Claro/Escuro ===
     document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.getElementById("themeToggle"), b = document.body;
+      const btn = document.getElementById("themeToggle");
+      const body = document.body;
       const saved = localStorage.getItem("theme");
       if (saved === "light") {
-        b.classList.add("light-mode");
+        body.classList.add("light-mode");
         btn.textContent = "🌙 Modo Escuro";
       }
       btn.onclick = () => {
-        b.classList.toggle("light-mode");
-        const l = b.classList.contains("light-mode");
+        body.classList.toggle("light-mode");
+        const l = body.classList.contains("light-mode");
         btn.textContent = l ? "🌙 Modo Escuro" : "☀️ Modo Claro";
         localStorage.setItem("theme", l ? "light" : "dark");
         playSound("click");
       };
     });
 
-    // === Splash seguro ===
+    // === Splash ===
     document.addEventListener("DOMContentLoaded", () => {
-      const s = document.getElementById("splash");
+      const splash = document.getElementById("splash");
       setTimeout(() => {
-        if (s) {
-          s.style.opacity = "0";
-          s.addEventListener("transitionend", () => s.remove());
-        }
-      }, 2000);
+        splash.style.opacity = "0";
+        splash.addEventListener("transitionend", () => splash.remove());
+      }, 1500);
     });
 
-    // === Dados ===
+    // === Carregar dados ===
     let eventos = [];
     try { eventos = JSON.parse(localStorage.getItem("eventos")) || []; }
     catch { eventos = []; }
 
     const idSelecionado = Number(localStorage.getItem("eventoSelecionado")) || 0;
-    const evento = eventos.find((e) => e.id === idSelecionado);
+    const evento = eventos.find(e => e.id === idSelecionado);
 
     if (!evento) {
-      console.warn("Evento não encontrado, voltando...");
-      setTimeout(() => (window.location.href = "index.html"), 800);
-      return; // impede execução do restante
+      alert("⚠️ Evento não encontrado ou não selecionado!");
+      window.location.href = "index.html";
     }
 
-    document.getElementById("tituloEvento").textContent = evento.nome;
-    document.getElementById("dataEvento").textContent =
-      "Data: " + (evento.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
-
+    const tituloEvento = document.getElementById("tituloEvento");
+    const dataEvento = document.getElementById("dataEvento");
     const listaLotes = document.getElementById("listaLotes");
     const secaoSetores = document.getElementById("secaoSetores");
     const listaSetores = document.getElementById("listaSetores");
 
+    tituloEvento.textContent = evento?.nome || "Evento não encontrado";
+    dataEvento.textContent = "Data: " + (evento?.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
+
     function salvar() {
       const todos = JSON.parse(localStorage.getItem("eventos")) || [];
-      const idx = todos.findIndex((e) => e.id === evento.id);
+      const idx = todos.findIndex(e => e.id === evento.id);
       if (idx >= 0) todos[idx] = evento;
       localStorage.setItem("eventos", JSON.stringify(todos));
     }
 
+    // === Renderizar lotes (versão segura) ===
     function renderLotes() {
+      if (!listaLotes) return console.warn("⚠️ listaLotes não existe no DOM.");
+      if (!evento || typeof evento !== "object") {
+        listaLotes.innerHTML = "<p>⚠️ Evento não encontrado.</p>";
+        return;
+      }
+
       listaLotes.innerHTML = "";
-      if (!evento.lotes || !evento.lotes.length) {
+      if (!Array.isArray(evento.lotes) || evento.lotes.length === 0) {
         listaLotes.innerHTML = "<p>Nenhum lote cadastrado.</p>";
         return;
       }
+
       evento.lotes.forEach((l, i) => {
         const div = document.createElement("div");
         div.classList.add("lote-card");
@@ -182,9 +189,8 @@
 
     function salvarLote() {
       const i = Number(listaSetores.dataset.index);
-      const inputs = listaSetores.querySelectorAll(".setor");
       const setores = [];
-      inputs.forEach((div) => {
+      listaSetores.querySelectorAll(".setor").forEach(div => {
         const [setor, meia, solid, inte] = div.querySelectorAll("input");
         setores.push({
           setor: setor.value.trim() || "Setor",
@@ -202,9 +208,8 @@
       renderLotes();
     }
 
-    // === PDF do Lote Atual ===
     async function gerarPDFLoteAtual() {
-      if (!window.jspdf) return alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente.");
+      if (!window.jspdf) return alert("⚠️ Gerador de PDF ainda carregando.");
       const { jsPDF } = window.jspdf;
       const i = Number(listaSetores.dataset.index);
       if (isNaN(i)) return alert("Nenhum lote aberto.");
@@ -213,8 +218,8 @@
       doc.setFont("helvetica","bold");
       doc.setFontSize(18);
       doc.text(evento.nome,10,20);
-      doc.setFontSize(12);
       doc.setFont("helvetica","normal");
+      doc.setFontSize(12);
       doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`,10,30);
       doc.text(`Lote Atual: ${lote.nome}`,10,45);
       let y=60;
@@ -243,12 +248,10 @@
 
     document.getElementById("btnAddSetor").onclick = adicionarSetor;
     document.getElementById("btnSalvarLote").onclick = salvarLote;
-    const btnPDF = document.getElementById("btnPDFLote");
-    if (btnPDF) btnPDF.onclick = gerarPDFLoteAtual;
-    document.getElementById("btnFecharLote").onclick = () => (secaoSetores.style.display = "none");
+    document.getElementById("btnPDFLote").onclick = gerarPDFLoteAtual;
+    document.getElementById("btnFecharLote").onclick = () => secaoSetores.style.display = "none";
     document.getElementById("voltar").onclick = () => {
       playSound("click");
-      window.scrollTo(0, 0);
       window.location.href = "index.html";
     };
 
