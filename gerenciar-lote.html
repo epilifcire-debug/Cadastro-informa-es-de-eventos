@@ -4,6 +4,90 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gerenciar Lotes</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0A0F1A" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+</head>
+<body>
+  <div id="splash">
+    <img src="img/logo.png" alt="Logo" id="splash-logo" />
+    <h2 id="splash-text">Carregando...</h2>
+  </div>
+
+  <header>
+    <img src="img/logo.png" alt="Logo" class="logo" />
+    <h1>Gerenciar Lotes</h1>
+    <button id="themeToggle">☀️ Modo Claro</button>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2 id="tituloEvento">Evento</h2>
+      <p id="dataEvento"></p>
+      <hr />
+      <h3>Lotes Cadastrados</h3>
+      <div id="listaLotes"></div>
+      <button id="btnNovoLote">➕ Novo Lote</button>
+      <button id="voltar">⬅️ Voltar</button>
+    </section>
+
+    <section class="card" id="secaoSetores" style="display:none;">
+      <h3 id="tituloLote">Editar Lote</h3>
+      <div id="listaSetores"></div>
+      <div style="margin-top: 10px;">
+        <button id="btnAddSetor">➕ Adicionar Setor</button>
+        <button id="btnSalvarLote">💾 Salvar Lote</button>
+        <button id="btnPDFLote" class="btn-pdf-ultimo">📄 Gerar PDF (Lote Atual)</button>
+        <button id="btnFecharLote">❌ Fechar</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Gerenciamento de Lotes | Desenvolvido por Eric Filipe</p>
+  </footer>
+
+  <script>
+    const sounds = {
+      click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q==")
+    };
+    function playSound(name) {
+      const sound = sounds[name];
+      if (sound) {
+        sound.currentTime = 0;
+        sound.volume = 0.3;
+        sound.play().catch(()=>{});
+      }
+    }
+
+    // Tema e Splash
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const splash=document.getElementById("splash");
+      setTimeout(()=>{ splash.style.opacity="0"; splash.style.visibility="hidden"; },2000);
+
+      const btn=document.getElementById("themeToggle"), b=document.body;
+      const saved=localStorage.getItem("theme");
+      if(saved==="light"){ b.classList.add("light-mode"); btn.textContent="🌙 Modo Escuro"; }
+      btn.onclick=()=>{
+        b.classList.toggle("light-mode");
+        const l=b.classList.contains("light-mode");
+        btn.textContent=l?"🌙 Modo Escuro":"☀️ Modo Claro";
+        localStorage.setItem("theme",l?"light":"dark");
+        playSound("click");
+      };
+    });
+  </script>
+
+  <script src="gerenciar-lote.js"></script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciar Lotes</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
