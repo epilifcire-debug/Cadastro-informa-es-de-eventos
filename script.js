@@ -66,13 +66,50 @@ function atualizarLista() {
       <p>💳 ${evento.formasPagamento || "-"}</p>
       <p>${evento.classificacao ? "🎟️ " + evento.classificacao : ""}</p>
       <p>${evento.descricao || ""}</p>
-      <button onclick="adicionarLote(${evento.id})">➕ Adicionar Lote</button>
+
+      <div class="evento-buttons">
+        <button onclick="editarEvento(${evento.id})">✏️ Editar Evento</button>
+        <button onclick="excluirEvento(${evento.id})">🗑️ Excluir Evento</button>
+        <button onclick="adicionarLote(${evento.id})">➕ Adicionar Lote</button>
+      </div>
+
       <div id="lotes-${evento.id}"></div>
     `;
 
     lista.appendChild(divEvento);
     renderizarLotes(evento);
   });
+}
+
+// ========================= EDITAR / EXCLUIR EVENTO =========================
+function editarEvento(id) {
+  const evento = eventos.find(e => e.id === id);
+  if (!evento) return alert("Evento não encontrado.");
+
+  const novoNome = prompt("Novo nome do evento:", evento.nome);
+  const novaData = prompt("Nova data do evento (AAAA-MM-DD):", evento.data);
+  const novaClassificacao = prompt("Nova classificação:", evento.classificacao);
+  const novoLocal = prompt("Novo local:", evento.local);
+  const novasFormas = prompt("Novas formas de pagamento:", evento.formasPagamento);
+  const novaDescricao = prompt("Nova descrição:", evento.descricao);
+
+  evento.nome = novoNome || evento.nome;
+  evento.data = novaData || evento.data;
+  evento.classificacao = novaClassificacao || evento.classificacao;
+  evento.local = novoLocal || evento.local;
+  evento.formasPagamento = novasFormas || evento.formasPagamento;
+  evento.descricao = novaDescricao || evento.descricao;
+
+  salvarEventos();
+  atualizarLista();
+  alert("✅ Evento atualizado com sucesso!");
+}
+
+function excluirEvento(id) {
+  if (!confirm("Tem certeza que deseja excluir este evento?")) return;
+  eventos = eventos.filter(e => e.id !== id);
+  salvarEventos();
+  atualizarLista();
 }
 
 // ========================= ADICIONAR LOTE =========================
@@ -149,7 +186,7 @@ function renderizarLotes(evento) {
   });
 }
 
-// ========================= EDITAR NOME DO LOTE =========================
+// ========================= EDITAR LOTE =========================
 function editarNomeLote(id, index) {
   const evento = eventos.find((e) => e.id === id);
   const novoNome = prompt("Novo nome do lote:", evento.lotes[index].nome);
@@ -159,8 +196,6 @@ function editarNomeLote(id, index) {
     atualizarLista();
   }
 }
-
-// ========================= EDITAR QUANTIDADE DE LOTES =========================
 function editarQtdLotes(id) {
   const evento = eventos.find((e) => e.id === id);
   const qtd = parseInt(prompt("Nova quantidade de lotes:", evento.lotes.length));
@@ -171,78 +206,7 @@ function editarQtdLotes(id) {
   }
 }
 
-// ========================= FLYER STORY (16:9) =========================
-function imprimirFlyerStory(eventoId) {
-  const evento = eventos.find((e) => e.id === eventoId);
-  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
-  const ultimoLote = evento.lotes[evento.lotes.length - 1];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF("l", "mm", "a4");
-
-  const canvas = document.createElement("canvas");
-  canvas.width = 842;
-  canvas.height = 595;
-  const ctx = canvas.getContext("2d");
-
-  const gradient = ctx.createLinearGradient(0, 0, 842, 0);
-  gradient.addColorStop(0, "#0A0F1A");
-  gradient.addColorStop(1, "#1E293B");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 842, 595);
-
-  if (evento.imagem) {
-    const img = new Image();
-    img.src = evento.imagem;
-    img.onload = () => {
-      const scale = Math.min(
-        0.9 * canvas.width / img.width,
-        0.9 * canvas.height / img.height
-      );
-      const w = img.width * scale;
-      const h = img.height * scale;
-      const x = (canvas.width - w) / 2;
-      const y = (canvas.height - h) / 2;
-      ctx.globalAlpha = 0.1;
-      ctx.drawImage(img, x, y, w, h);
-      ctx.globalAlpha = 1;
-      desenhar();
-    };
-  } else desenhar();
-
-  function desenhar() {
-    const bgData = canvas.toDataURL("image/png");
-    doc.addImage(bgData, "PNG", 0, 0, 297, 210);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(26);
-    doc.setTextColor(66, 165, 245);
-    doc.text(evento.nome, 148, 40, { align: "center" });
-    doc.setFontSize(18);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`🎟️ ${ultimoLote.nome}`, 148, 60, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(`Virada de lote: ${ultimoLote.dataVirada}`, 148, 72, { align: "center" });
-
-    let y = 95;
-    ultimoLote.setores.forEach((s) => {
-      doc.setFillColor(18, 24, 38);
-      doc.roundedRect(40, y - 8, 220, 25, 3, 3, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(146, 197, 255);
-      doc.text(s.setor.toUpperCase(), 45, y + 2);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(255, 255, 255);
-      doc.text(`Meia: R$ ${s.valores.meia || "-"}`, 45, y + 10);
-      doc.text(`Solidário: R$ ${s.valores.solidario || "-"}`, 120, y + 10);
-      doc.text(`Inteira: R$ ${s.valores.inteira || "-"}`, 200, y + 10);
-      y += 32;
-    });
-
-    const nomeArquivo = `Flyer_Story_${evento.nome.replace(/\s+/g, "_")}_${ultimoLote.nome.replace(/\s+/g, "_")}.pdf`;
-    doc.save(nomeArquivo);
-  }
-}
-
-// ========================= VISUALIZAR FLYER (MODAL) =========================
+// ========================= VISUALIZAR FLYER =========================
 function visualizarFlyer(eventoId) {
   const evento = eventos.find(e => e.id === eventoId);
   if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
