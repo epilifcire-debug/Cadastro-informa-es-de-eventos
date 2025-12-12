@@ -1,81 +1,96 @@
-// ===================== CONFIGURAÇÃO =====================
-const CACHE_NAME = "cadastro-eventos-v4";
+// ========================= CONFIGURAÇÃO =========================
+const CACHE_NAME = "eventos-cache-v2"; // altere a versão quando atualizar arquivos
+const REPO = "/Cadastro-informa-es-de-eventos"; // nome exato da pasta do GitHub Pages
+
+// Arquivos principais a serem armazenados
 const URLS_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./script.js",
-  "./jspdf.umd.min.js",
-  "./manifest.json",
-  "./logo-192.png",
-  "./logo-512.png"
+  `${REPO}/`,
+  `${REPO}/index.html`,
+  `${REPO}/style.css`,
+  `${REPO}/script.js`,
+  `${REPO}/jspdf.umd.min.js`,
+  `${REPO}/manifest.json`,
+  `${REPO}/img/logo.png`
 ];
 
-// ===================== INSTALAÇÃO =====================
+// ========================= INSTALAÇÃO =========================
 self.addEventListener("install", (event) => {
   console.log("📦 Instalando Service Worker...");
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log("✅ Cache criado:", CACHE_NAME);
-        return cache.addAll(URLS_TO_CACHE);
-      })
-      .catch((err) => console.error("⚠️ Erro ao adicionar arquivos ao cache:", err))
-  );
-  self.skipWaiting(); // ativa imediatamente após instalar
-});
 
-// ===================== ATIVAÇÃO =====================
-self.addEventListener("activate", (event) => {
-  console.log("♻️ Ativando nova versão do Service Worker...");
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log("🧹 Removendo cache antigo:", key);
-            return caches.delete(key);
-          }
-        })
+    caches.open(CACHE_NAME).then(async (cache) => {
+      console.log("✅ Cache aberto:", CACHE_NAME);
+      const results = await Promise.allSettled(
+        URLS_TO_CACHE.map((url) =>
+          cache.add(url).catch((err) => console.warn("⚠️ Falha ao adicionar:", url, err))
+        )
       );
+
+      const falhas = results.filter((r) => r.status === "rejected");
+      if (falhas.length) {
+        console.warn("⚠️ Alguns arquivos não foram adicionados ao cache:", falhas);
+      }
     })
   );
-  return self.clients.claim(); // assume controle das abas abertas
+
+  self.skipWaiting();
 });
 
-// ===================== INTERCEPTAÇÃO DE REQUISIÇÕES =====================
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
+// ========================= ATIVAÇÃO =========================
+self.addEventListener("activate", (event) => {
+  console.log("♻️ Ativando novo Service Worker...");
 
-  // Ignora requisições externas (CDNs)
-  if (!req.url.startsWith(self.location.origin)) return;
+  event.waitUntil(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) {
+            console.log("🗑️ Deletando cache antigo:", name);
+            return caches.delete(name);
+          }
+        })
+      )
+    )
+  );
+
+  self.clients.claim();
+});
+
+// ========================= INTERCEPTAÇÃO DE REQUISIÇÕES =========================
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(req).then((cachedRes) => {
-      if (cachedRes) return cachedRes;
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
 
-      // Busca da rede com cache seguro
-      return fetch(req)
-        .then((networkRes) => {
-          const cloneRes = networkRes.clone(); // ✅ evita erro de "body already used"
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, cloneRes));
-          return networkRes;
+      return fetch(event.request)
+        .then((response) => {
+          // Só armazena respostas válidas
+          if (!response || response.status !== 200 || response.type !== "basic") {
+            return response;
+          }
+
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
+          return response;
         })
         .catch(() => {
-          // Offline: retorna index.html para navegação
-          if (req.mode === "navigate") return caches.match("./index.html");
+          // fallback offline simples
+          if (event.request.destination === "document") {
+            return caches.match(`${REPO}/index.html`);
+          }
         });
     })
   );
 });
 
-// ===================== ATUALIZAÇÃO AUTOMÁTICA =====================
+// ========================= MENSAGENS (opcional) =========================
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
-});
-
-self.addEventListener("controllerchange", () => {
-  console.log("🔄 Nova versão do Service Worker ativa!");
 });
