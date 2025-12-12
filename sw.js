@@ -1,7 +1,7 @@
-// ======= SERVICE WORKER (PWA OFFLINE CACHE) =======
+// ===================== SERVICE WORKER PWA =====================
 
-const CACHE_NAME = "eventos-pwa-v3";
-const urlsToCache = [
+const CACHE_NAME = "eventos-pwa-v5";
+const URLS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
@@ -11,65 +11,55 @@ const urlsToCache = [
   "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
 ];
 
-// ======= INSTALAÇÃO =======
+// Instalação: pré-cache dos arquivos principais
 self.addEventListener("install", (event) => {
-  console.log("📦 Instalando Service Worker...");
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log("✅ Cache criado com sucesso!");
-        return cache.addAll(urlsToCache);
-      })
-      .catch((err) => console.error("❌ Erro ao criar cache:", err))
-  );
-});
-
-// ======= ATIVAÇÃO =======
-self.addEventListener("activate", (event) => {
-  console.log("🚀 Service Worker ativo!");
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            console.log("🧹 Limpando cache antigo:", name);
-            return caches.delete(name);
-          }
-        })
-      );
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(URLS_TO_CACHE);
     })
   );
 });
 
-// ======= INTERCEPTAÇÃO DE REQUISIÇÕES =======
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Retorna do cache ou busca online
-        return response || fetch(event.request).then((fetchResponse) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            // Atualiza cache com nova resposta se for seguro
-            if (event.request.url.startsWith("http") && !event.request.url.includes("chrome-extension")) {
-              cache.put(event.request, fetchResponse.clone());
-            }
-            return fetchResponse;
-          });
-        });
-      })
-      .catch(() => {
-        // Retorno offline padrão
-        if (event.request.mode === "navigate") {
-          return caches.match("./index.html");
-        }
-      })
+// Ativação: limpa caches antigos
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(
+        names.map((name) => {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
+          }
+        })
+      )
+    )
   );
 });
 
-// ======= ATUALIZAÇÃO AUTOMÁTICA =======
-self.addEventListener("message", (event) => {
-  if (event.data === "updateSW") {
-    console.log("♻️ Atualizando Service Worker...");
-    self.skipWaiting();
-  }
+// Fetch: estratégia cache-first com fallback para rede
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      if (response) return response;
+
+      return fetch(event.request)
+        .then((networkResponse) => {
+          // Só faz cache de requisições http(s) normais
+          if (
+            event.request.method === "GET" &&
+            event.request.url.startsWith("http")
+          ) {
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, networkResponse.clone());
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Se for navegação e falhar, tenta voltar pro index
+          if (event.request.mode === "navigate") {
+            return caches.match("./index.html");
+          }
+        });
+    })
+  );
 });
