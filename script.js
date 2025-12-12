@@ -49,7 +49,6 @@ document.getElementById("formEvento").addEventListener("submit", (e) => {
 function salvarEventos() {
   localStorage.setItem("eventos", JSON.stringify(eventos));
 }
-
 // ========================= ATUALIZAR LISTA =========================
 function atualizarLista() {
   const lista = document.getElementById("listaEventos");
@@ -93,6 +92,28 @@ function editarEvento(id) {
   const novasFormas = prompt("Novas formas de pagamento:", evento.formasPagamento);
   const novaDescricao = prompt("Nova descrição:", evento.descricao);
 
+  // 🔹 Novo: permite alterar arte de fundo (marca d'água)
+  const novaImagem = confirm("Deseja alterar a arte de fundo (marca d'água)?");
+  if (novaImagem) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          evento.imagem = ev.target.result;
+          salvarEventos();
+          atualizarLista();
+          alert("✅ Arte atualizada com sucesso!");
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  }
+
   evento.nome = novoNome || evento.nome;
   evento.data = novaData || evento.data;
   evento.classificacao = novaClassificacao || evento.classificacao;
@@ -111,7 +132,6 @@ function excluirEvento(id) {
   salvarEventos();
   atualizarLista();
 }
-
 // ========================= ADICIONAR LOTE =========================
 function adicionarLote(id) {
   const evento = eventos.find(e => e.id === id);
@@ -128,10 +148,7 @@ function adicionarLote(id) {
     const meia = prompt("Valor Meia:");
     const solidario = prompt("Valor Solidário:");
     const inteira = prompt("Valor Inteira:");
-    setores.push({
-      setor,
-      valores: { meia, solidario, inteira }
-    });
+    setores.push({ setor, valores: { meia, solidario, inteira } });
     continuar = confirm("Adicionar outro setor?");
   }
 
@@ -166,9 +183,8 @@ function renderizarLotes(evento) {
       <ul>
         ${lote.setores
           .map(
-            (s) => `
-          <li><strong>${s.setor}</strong> — Meia: R$${s.valores.meia || "-"} | Solidário: R$${s.valores.solidario || "-"} | Inteira: R$${s.valores.inteira || "-"}</li>
-        `
+            (s) =>
+              `<li><strong>${s.setor}</strong> — Meia: R$${s.valores.meia || "-"} | Solidário: R$${s.valores.solidario || "-"} | Inteira: R$${s.valores.inteira || "-"}</li>`
           )
           .join("")}
       </ul>
@@ -181,7 +197,6 @@ function renderizarLotes(evento) {
         <button onclick="visualizarFlyer(${evento.id})">👁️ Visualizar Flyer</button>
       </div>
     `;
-
     container.appendChild(divLote);
   });
 }
@@ -206,99 +221,6 @@ function editarQtdLotes(id) {
     atualizarLista();
   }
 }
-
-// ========================= FLYER ESCURO / CLARO =========================
-function imprimirUltimoLote(eventoId, tema) {
-  const evento = eventos.find((e) => e.id === eventoId);
-  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
-  const ultimoLote = evento.lotes[evento.lotes.length - 1];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF("p", "mm", "a4");
-
-  function sanitizeText(text) {
-    return text
-      ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x00-\x7F]/g, "")
-      : "";
-  }
-
-  const bgColor = tema === "claro" ? [255, 255, 255] : [10, 15, 26];
-  const txtColor = tema === "claro" ? [0, 0, 0] : [255, 255, 255];
-  const accent = tema === "claro" ? [0, 102, 255] : [146, 197, 255];
-
-  doc.setFillColor(...bgColor);
-  doc.rect(0, 0, 210, 297, "F");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor(...accent);
-  doc.text(sanitizeText(evento.nome), 105, 30, { align: "center" });
-
-  doc.setFontSize(16);
-  doc.setTextColor(...txtColor);
-  doc.text(sanitizeText(`Lote: ${ultimoLote.nome}`), 105, 45, { align: "center" });
-  doc.text(sanitizeText(`Virada de lote: ${ultimoLote.dataVirada}`), 105, 55, { align: "center" });
-
-  let y = 75;
-  ultimoLote.setores.forEach((s) => {
-    doc.setFontSize(12);
-    doc.setTextColor(...txtColor);
-    doc.text(sanitizeText(s.setor), 35, y);
-    doc.text(sanitizeText(`Meia: R$${s.valores.meia || "-"}`), 35, y + 10);
-    doc.text(sanitizeText(`Solidário: R$${s.valores.solidario || "-"}`), 90, y + 10);
-    doc.text(sanitizeText(`Inteira: R$${s.valores.inteira || "-"}`), 150, y + 10);
-    y += 30;
-  });
-
-  const nomeArquivo = `Flyer_${tema}_${sanitizeText(evento.nome.replace(/\s+/g, "_"))}_${sanitizeText(ultimoLote.nome.replace(/\s+/g, "_"))}.pdf`;
-  doc.save(nomeArquivo);
-}
-
-// ========================= FLYER STORY 16:9 =========================
-function imprimirFlyerStory(eventoId) {
-  const evento = eventos.find((e) => e.id === eventoId);
-  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
-  const ultimoLote = evento.lotes[evento.lotes.length - 1];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF("l", "mm", "a4");
-
-  function sanitizeText(text) {
-    return text
-      ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x00-\x7F]/g, "")
-      : "";
-  }
-
-  doc.setFillColor(10, 15, 26);
-  doc.rect(0, 0, 297, 210, "F");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(26);
-  doc.setTextColor(146, 197, 255);
-  doc.text(sanitizeText(evento.nome), 148, 40, { align: "center" });
-  doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text(sanitizeText(`Lote: ${ultimoLote.nome}`), 148, 60, { align: "center" });
-  doc.setFontSize(12);
-  doc.text(sanitizeText(`Virada de lote: ${ultimoLote.dataVirada}`), 148, 72, { align: "center" });
-
-  let y = 95;
-  ultimoLote.setores.forEach((s) => {
-    doc.setFillColor(18, 24, 38);
-    doc.roundedRect(40, y - 8, 220, 25, 3, 3, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(146, 197, 255);
-    doc.text(sanitizeText(s.setor.toUpperCase()), 45, y + 2);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(255, 255, 255);
-    doc.text(sanitizeText(`Meia: R$ ${s.valores.meia || "-"}`), 45, y + 10);
-    doc.text(sanitizeText(`Solidário: R$ ${s.valores.solidario || "-"}`), 120, y + 10);
-    doc.text(sanitizeText(`Inteira: R$ ${s.valores.inteira || "-"}`), 200, y + 10);
-    y += 32;
-  });
-
-  const nomeArquivo = `Flyer_Story_${sanitizeText(evento.nome.replace(/\s+/g, "_"))}_${sanitizeText(ultimoLote.nome.replace(/\s+/g, "_"))}.pdf`;
-  doc.save(nomeArquivo);
-}
-
 // ========================= VISUALIZAR FLYER =========================
 function visualizarFlyer(eventoId) {
   const evento = eventos.find(e => e.id === eventoId);
@@ -325,7 +247,7 @@ function visualizarFlyer(eventoId) {
       const h = img.height * scale;
       const x = (canvas.width - w) / 2;
       const y = (canvas.height - h) / 2;
-      ctx.globalAlpha = 0.1;
+      ctx.globalAlpha = 0.1; // marca d'água suave
       ctx.drawImage(img, x, y, w, h);
       ctx.globalAlpha = 1.0;
       desenhar();
@@ -411,10 +333,9 @@ document.getElementById("btnResetar").onclick = () => {
   }
 };
 
-// ========================= INICIALIZAR =========================
+// ========================= INICIALIZAR E SERVICE WORKER =========================
 atualizarLista();
 
-// ========================= SERVICE WORKER =========================
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
