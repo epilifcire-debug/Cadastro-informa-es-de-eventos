@@ -9,6 +9,7 @@ const URLS_TO_CACHE = [
   "./style.css",
   "./script.js",
   "./manifest.json",
+  "./favicon.ico",
   "./img/logo.png",
   "./img/logo-48.png",
   "./img/logo-72.png",
@@ -109,3 +110,4 @@ self.addEventListener("message", (event) => {
     self.skipWaiting();
   }
 });
+
