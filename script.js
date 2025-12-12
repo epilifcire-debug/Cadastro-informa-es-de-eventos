@@ -206,6 +206,98 @@ function editarQtdLotes(id) {
   }
 }
 
+// ========================= FLYER ESCURO / CLARO =========================
+function imprimirUltimoLote(eventoId, tema) {
+  const evento = eventos.find((e) => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+  const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+
+  function sanitizeText(text) {
+    return text
+      ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x00-\x7F]/g, "")
+      : "";
+  }
+
+  const bgColor = tema === "claro" ? [255, 255, 255] : [10, 15, 26];
+  const txtColor = tema === "claro" ? [0, 0, 0] : [255, 255, 255];
+  const accent = tema === "claro" ? [0, 102, 255] : [146, 197, 255];
+
+  doc.setFillColor(...bgColor);
+  doc.rect(0, 0, 210, 297, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(...accent);
+  doc.text(sanitizeText(evento.nome), 105, 30, { align: "center" });
+
+  doc.setFontSize(16);
+  doc.setTextColor(...txtColor);
+  doc.text(sanitizeText(`Lote: ${ultimoLote.nome}`), 105, 45, { align: "center" });
+  doc.text(sanitizeText(`Virada de lote: ${ultimoLote.dataVirada}`), 105, 55, { align: "center" });
+
+  let y = 75;
+  ultimoLote.setores.forEach((s) => {
+    doc.setFontSize(12);
+    doc.setTextColor(...txtColor);
+    doc.text(sanitizeText(s.setor), 35, y);
+    doc.text(sanitizeText(`Meia: R$${s.valores.meia || "-"}`), 35, y + 10);
+    doc.text(sanitizeText(`Solidário: R$${s.valores.solidario || "-"}`), 90, y + 10);
+    doc.text(sanitizeText(`Inteira: R$${s.valores.inteira || "-"}`), 150, y + 10);
+    y += 30;
+  });
+
+  const nomeArquivo = `Flyer_${tema}_${sanitizeText(evento.nome.replace(/\s+/g, "_"))}_${sanitizeText(ultimoLote.nome.replace(/\s+/g, "_"))}.pdf`;
+  doc.save(nomeArquivo);
+}
+
+// ========================= FLYER STORY 16:9 =========================
+function imprimirFlyerStory(eventoId) {
+  const evento = eventos.find((e) => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+  const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("l", "mm", "a4");
+
+  function sanitizeText(text) {
+    return text
+      ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x00-\x7F]/g, "")
+      : "";
+  }
+
+  doc.setFillColor(10, 15, 26);
+  doc.rect(0, 0, 297, 210, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(26);
+  doc.setTextColor(146, 197, 255);
+  doc.text(sanitizeText(evento.nome), 148, 40, { align: "center" });
+  doc.setFontSize(18);
+  doc.setTextColor(255, 255, 255);
+  doc.text(sanitizeText(`Lote: ${ultimoLote.nome}`), 148, 60, { align: "center" });
+  doc.setFontSize(12);
+  doc.text(sanitizeText(`Virada de lote: ${ultimoLote.dataVirada}`), 148, 72, { align: "center" });
+
+  let y = 95;
+  ultimoLote.setores.forEach((s) => {
+    doc.setFillColor(18, 24, 38);
+    doc.roundedRect(40, y - 8, 220, 25, 3, 3, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(146, 197, 255);
+    doc.text(sanitizeText(s.setor.toUpperCase()), 45, y + 2);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(255, 255, 255);
+    doc.text(sanitizeText(`Meia: R$ ${s.valores.meia || "-"}`), 45, y + 10);
+    doc.text(sanitizeText(`Solidário: R$ ${s.valores.solidario || "-"}`), 120, y + 10);
+    doc.text(sanitizeText(`Inteira: R$ ${s.valores.inteira || "-"}`), 200, y + 10);
+    y += 32;
+  });
+
+  const nomeArquivo = `Flyer_Story_${sanitizeText(evento.nome.replace(/\s+/g, "_"))}_${sanitizeText(ultimoLote.nome.replace(/\s+/g, "_"))}.pdf`;
+  doc.save(nomeArquivo);
+}
+
 // ========================= VISUALIZAR FLYER =========================
 function visualizarFlyer(eventoId) {
   const evento = eventos.find(e => e.id === eventoId);
@@ -245,7 +337,7 @@ function visualizarFlyer(eventoId) {
     ctx.textAlign = "center";
     ctx.fillText(evento.nome, canvas.width / 2, 70);
     ctx.font = "bold 22px Poppins";
-    ctx.fillText(`🎟️ ${ultimoLote.nome}`, canvas.width / 2, 110);
+    ctx.fillText(`Lote: ${ultimoLote.nome}`, canvas.width / 2, 110);
     ctx.font = "16px Poppins";
     ctx.fillText(`Virada de lote: ${ultimoLote.dataVirada}`, canvas.width / 2, 140);
 
@@ -270,7 +362,7 @@ function visualizarFlyer(eventoId) {
   window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
-// ========================= BACKUP E RESTAURAÇÃO =========================
+// ========================= BACKUP / RESTAURAÇÃO =========================
 document.getElementById("btnExportar").onclick = () => {
   const blob = new Blob([JSON.stringify(eventos, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -279,14 +371,27 @@ document.getElementById("btnExportar").onclick = () => {
   a.click();
 };
 
+document.getElementById("btnImportar
+
+// ========================= BACKUP / RESTAURAÇÃO (continuação) =========================
 document.getElementById("btnImportar").onclick = () => {
   const file = document.getElementById("importarBackup").files[0];
   if (!file) return alert("Selecione um arquivo primeiro!");
   const reader = new FileReader();
   reader.onload = (e) => {
-    eventos = JSON.parse(e.target.result);
-    salvarEventos();
-    atualizarLista();
+    try {
+      const dados = JSON.parse(e.target.result);
+      if (Array.isArray(dados)) {
+        eventos = dados;
+        salvarEventos();
+        atualizarLista();
+        alert("✅ Backup importado com sucesso!");
+      } else {
+        alert("⚠️ Arquivo inválido.");
+      }
+    } catch (err) {
+      alert("⚠️ Erro ao importar backup: " + err.message);
+    }
   };
   reader.readAsText(file);
 };
@@ -296,11 +401,12 @@ document.getElementById("btnLimpar").onclick = () => {
     localStorage.removeItem("eventos");
     eventos = [];
     atualizarLista();
+    alert("🗑️ Todos os eventos foram apagados.");
   }
 };
 
 document.getElementById("btnResetar").onclick = () => {
-  if (confirm("Deseja resetar o sistema completamente?")) {
+  if (confirm("Deseja resetar completamente o sistema?")) {
     localStorage.clear();
     eventos = [];
     location.reload();
