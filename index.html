@@ -19,26 +19,9 @@
 
   <!-- Script principal -->
   <script defer src="script.js"></script>
-
-  <script>
-    // Evita travar no splash
-    window.addEventListener("load", () => {
-      const splash = document.getElementById("splash");
-      if (splash) {
-        splash.style.opacity = "0";
-        splash.style.visibility = "hidden";
-      }
-    });
-  </script>
 </head>
 
 <body>
-  <!-- Splash screen -->
-  <div id="splash">
-    <img src="./img/logo-192.png" alt="Logo" id="splash-logo" />
-    <h2 id="splash-text">Carregando...</h2>
-  </div>
-
   <header>
     <img src="./img/logo-48.png" alt="Logo" class="logo" />
     <h1>Cadastro de Eventos</h1>
@@ -61,7 +44,7 @@
 
     <section class="card">
       <h2>Eventos Cadastrados</h2>
-      <div id="listaEventos"><p>Carregando eventos...</p></div>
+      <div id="listaEventos"><p>Nenhum evento cadastrado.</p></div>
 
       <div style="margin-top:15px;">
         <button id="btnExportar">⬇️ Exportar Backup</button>
@@ -91,8 +74,8 @@
     }
   </script>
 
+  <!-- Modo Claro / Escuro -->
   <script>
-    // Modo Claro / Escuro
     document.addEventListener("DOMContentLoaded", () => {
       const btn = document.getElementById("themeToggle");
       const body = document.body;
