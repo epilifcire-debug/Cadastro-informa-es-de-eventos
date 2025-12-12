@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gerenciar Lotes</title>
 
-  <!-- PWA -->
+  <!-- Manifest e ícones -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0A0F1A" />
-  <link rel="icon" type="image/png" href="./img/logo-48.png" />
+  <link rel="icon" href="./img/logo-48.png" type="image/png" />
   <link rel="apple-touch-icon" href="./img/logo-192.png" />
 
-  <!-- Estilos -->
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css" />
 
   <!-- jsPDF -->
@@ -19,13 +19,6 @@
 </head>
 
 <body>
-  <!-- Splash -->
-  <div id="splash">
-    <img src="./img/logo-192.png" alt="Logo" id="splash-logo" />
-    <h2 id="splash-text">Carregando...</h2>
-  </div>
-
-  <!-- Cabeçalho -->
   <header>
     <img src="./img/logo-48.png" alt="Logo" class="logo" />
     <h1>Gerenciar Lotes</h1>
@@ -33,27 +26,27 @@
   </header>
 
   <main>
-    <!-- Card do evento -->
     <section class="card">
       <h2 id="tituloEvento">Evento</h2>
       <p id="dataEvento"></p>
       <hr />
 
       <h3>Lotes Cadastrados</h3>
-      <div id="listaLotes"></div>
+      <div id="listaLotes"><p>Nenhum lote cadastrado.</p></div>
 
-      <button id="btnNovoLote">➕ Novo Lote</button>
-      <button id="voltar">⬅️ Voltar</button>
+      <div style="margin-top:10px;">
+        <button id="btnNovoLote">➕ Novo Lote</button>
+        <button id="voltar">⬅️ Voltar</button>
+      </div>
     </section>
 
-    <!-- Card dos setores -->
-    <section class="card" id="secaoSetores" style="display:none;">
+    <section class="card" id="secaoSetores" style="display: none;">
       <h3 id="tituloLote">Editar Lote</h3>
       <div id="listaSetores"></div>
 
-      <div style="margin-top: 10px;">
+      <div style="margin-top:10px;">
         <button id="btnAddSetor">➕ Adicionar Setor</button>
-        <button id="btnSalvarLote" class="btn-salvar">💾 Salvar Lote</button>
+        <button id="btnSalvarLote">💾 Salvar Lote</button>
         <button id="btnPDFLote" class="btn-pdf-ultimo">📄 Gerar PDF (Lote Atual)</button>
         <button id="btnFecharLote" class="btn-cancelar">❌ Fechar</button>
       </div>
@@ -64,63 +57,60 @@
     <p>Gerenciamento de Lotes | Desenvolvido por Eric Filipe</p>
   </footer>
 
+  <!-- Script -->
   <script>
-    // === Tema ===
+    // === Tema Escuro / Claro ===
     document.addEventListener("DOMContentLoaded", () => {
       const btn = document.getElementById("themeToggle");
-      const b = document.body;
+      const body = document.body;
       const saved = localStorage.getItem("theme");
-
       if (saved === "light") {
-        b.classList.add("light-mode");
+        body.classList.add("light-mode");
         btn.textContent = "🌙 Modo Escuro";
       }
 
       btn.onclick = () => {
-        b.classList.toggle("light-mode");
-        const light = b.classList.contains("light-mode");
+        body.classList.toggle("light-mode");
+        const light = body.classList.contains("light-mode");
         btn.textContent = light ? "🌙 Modo Escuro" : "☀️ Modo Claro";
         localStorage.setItem("theme", light ? "light" : "dark");
       };
     });
 
-    // === Splash ===
-    window.addEventListener("load", () => {
-      const splash = document.getElementById("splash");
-      setTimeout(() => {
-        splash.style.opacity = "0";
-        splash.style.visibility = "hidden";
-      }, 1200);
-    });
-
     // === Dados ===
-    const eventos = JSON.parse(localStorage.getItem("eventos")) || [];
-    const idSelecionado = Number(localStorage.getItem("eventoSelecionado"));
-    const evento = eventos.find(e => e.id === idSelecionado);
-
-    if (!evento) {
-      alert("⚠️ Evento não encontrado.");
-      window.location.href = "index.html";
+    let eventos = [];
+    try {
+      eventos = JSON.parse(localStorage.getItem("eventos")) || [];
+    } catch {
+      eventos = [];
     }
 
-    const listaLotes = document.getElementById("listaLotes");
-    const secaoSetores = document.getElementById("secaoSetores");
-    const listaSetores = document.getElementById("listaSetores");
+    const idSelecionado = Number(localStorage.getItem("eventoSelecionado")) || 0;
+    const evento = eventos.find((e) => e.id === idSelecionado);
+
+    if (!evento) {
+      alert("Evento não encontrado!");
+      window.location.href = "index.html";
+    }
 
     document.getElementById("tituloEvento").textContent = evento?.nome || "Evento não encontrado";
     document.getElementById("dataEvento").textContent =
       "Data: " + (evento?.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
 
+    const listaLotes = document.getElementById("listaLotes");
+    const secaoSetores = document.getElementById("secaoSetores");
+    const listaSetores = document.getElementById("listaSetores");
+
     function salvar() {
       const todos = JSON.parse(localStorage.getItem("eventos")) || [];
-      const idx = todos.findIndex(e => e.id === evento.id);
+      const idx = todos.findIndex((e) => e.id === evento.id);
       if (idx >= 0) todos[idx] = evento;
       localStorage.setItem("eventos", JSON.stringify(todos));
     }
 
     function renderLotes() {
       listaLotes.innerHTML = "";
-      if (!evento.lotes || evento.lotes.length === 0) {
+      if (!evento.lotes || !evento.lotes.length) {
         listaLotes.innerHTML = "<p>Nenhum lote cadastrado.</p>";
         return;
       }
@@ -131,19 +121,19 @@
         div.innerHTML = `
           <h4>${l.nome}</h4>
           <p>${l.setores?.length || 0} setor(es)</p>
-          <button onclick="abrirLote(${i})">✏️ Editar</button>
-          <button onclick="excluirLote(${i})" class="btn-cancelar">🗑 Excluir</button>
+          <button onclick="abrirLote(${i})">Editar</button>
+          <button onclick="excluirLote(${i})" class="btn-cancelar">Excluir</button>
         `;
         listaLotes.appendChild(div);
       });
     }
 
-    window.abrirLote = function (i) {
+    function abrirLote(i) {
       secaoSetores.style.display = "block";
       listaSetores.innerHTML = "";
       const lote = evento.lotes[i];
-      listaSetores.dataset.index = i;
       document.getElementById("tituloLote").textContent = "Editando: " + lote.nome;
+      listaSetores.dataset.index = i;
 
       (lote.setores || []).forEach((s, idx) => {
         const div = document.createElement("div");
@@ -157,14 +147,14 @@
         `;
         listaSetores.appendChild(div);
       });
-    };
+    }
 
-    window.excluirLote = function (i) {
+    function excluirLote(i) {
       if (!confirm("Excluir este lote?")) return;
       evento.lotes.splice(i, 1);
       salvar();
       renderLotes();
-    };
+    }
 
     function adicionarSetor() {
       const i = Number(listaSetores.dataset.index);
@@ -179,17 +169,18 @@
       }
     }
 
-    window.removerSetor = function (idx) {
+    function removerSetor(idx) {
       const i = Number(listaSetores.dataset.index);
       evento.lotes[i].setores.splice(idx, 1);
       salvar();
       abrirLote(i);
-    };
+    }
 
     function salvarLote() {
       const i = Number(listaSetores.dataset.index);
+      const inputs = listaSetores.querySelectorAll(".setor");
       const setores = [];
-      listaSetores.querySelectorAll(".setor").forEach(div => {
+      inputs.forEach((div) => {
         const [setor, meia, solid, inte] = div.querySelectorAll("input");
         setores.push({
           setor: setor.value.trim() || "Setor",
@@ -207,21 +198,23 @@
       renderLotes();
     }
 
+    // === PDF do Lote Atual ===
     async function gerarPDFLoteAtual() {
       if (!window.jspdf) {
-        alert("⚠️ Gerador de PDF ainda carregando. Tente novamente.");
+        alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente.");
         return;
       }
       const { jsPDF } = window.jspdf;
       const i = Number(listaSetores.dataset.index);
       if (isNaN(i)) return alert("Nenhum lote aberto.");
-
       const lote = evento.lotes[i];
       const doc = new jsPDF();
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.text(evento.nome, 10, 20);
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
       doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`, 10, 30);
       doc.text(`Lote Atual: ${lote.nome}`, 10, 45);
 
@@ -238,13 +231,12 @@
             y = 20;
           }
         });
-      } else {
-        doc.text("Nenhum setor cadastrado neste lote.", 10, y);
-      }
+      } else doc.text("Nenhum setor cadastrado neste lote.", 10, y);
 
       doc.save(`${evento.nome}-${lote.nome}.pdf`);
     }
 
+    // === Botões ===
     document.getElementById("btnNovoLote").onclick = () => {
       const nome = prompt("Nome do novo lote:");
       if (!nome) return;
