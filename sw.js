@@ -1,5 +1,5 @@
 // ===================== CONFIGURAÇÃO =====================
-const CACHE_NAME = "cadastro-eventos-v3";
+const CACHE_NAME = "cadastro-eventos-v4";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
@@ -22,7 +22,7 @@ self.addEventListener("install", (event) => {
       })
       .catch((err) => console.error("⚠️ Erro ao adicionar arquivos ao cache:", err))
   );
-  self.skipWaiting(); // força ativação imediata
+  self.skipWaiting(); // ativa imediatamente após instalar
 });
 
 // ===================== ATIVAÇÃO =====================
@@ -40,32 +40,31 @@ self.addEventListener("activate", (event) => {
       );
     })
   );
-  return self.clients.claim(); // assume controle imediato das abas
+  return self.clients.claim(); // assume controle das abas abertas
 });
 
 // ===================== INTERCEPTAÇÃO DE REQUISIÇÕES =====================
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+
+  // Ignora requisições externas (CDNs)
+  if (!req.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
-    caches.match(req).then((res) => {
-      // Retorna do cache, ou busca da rede
-      return (
-        res ||
-        fetch(req)
-          .then((response) => {
-            // Cache dinâmico apenas para arquivos do mesmo domínio
-            if (req.url.startsWith(self.location.origin)) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(req, response.clone()));
-            }
-            return response;
-          })
-          .catch(() => {
-            // Modo offline básico
-            if (req.mode === "navigate") {
-              return caches.match("./index.html");
-            }
-          })
-      );
+    caches.match(req).then((cachedRes) => {
+      if (cachedRes) return cachedRes;
+
+      // Busca da rede com cache seguro
+      return fetch(req)
+        .then((networkRes) => {
+          const cloneRes = networkRes.clone(); // ✅ evita erro de "body already used"
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, cloneRes));
+          return networkRes;
+        })
+        .catch(() => {
+          // Offline: retorna index.html para navegação
+          if (req.mode === "navigate") return caches.match("./index.html");
+        });
     })
   );
 });
@@ -77,7 +76,6 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// Notifica o usuário sobre nova versão
 self.addEventListener("controllerchange", () => {
-  console.log("🔄 Nova versão ativa!");
+  console.log("🔄 Nova versão do Service Worker ativa!");
 });
