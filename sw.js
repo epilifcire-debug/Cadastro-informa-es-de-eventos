@@ -1,7 +1,3 @@
-// ==============================
-// 🧠 Service Worker - Eric Filipe
-// ==============================
-
 const CACHE_NAME = "eventos-cache-v2";
 const FILES_TO_CACHE = [
   "./",
@@ -11,13 +7,13 @@ const FILES_TO_CACHE = [
   "./gerenciar-lote.html",
   "./manifest.json",
   "./img/logo.png",
+  "./img/logo-48.png",
   "./img/logo-96.png",
   "./img/logo-144.png",
   "./img/logo-192.png",
   "./img/logo-512.png"
 ];
 
-// Instalação do Service Worker
 self.addEventListener("install", (event) => {
   console.log("📦 Instalando Service Worker...");
   event.waitUntil(
@@ -28,7 +24,6 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Ativação - limpa caches antigos
 self.addEventListener("activate", (event) => {
   console.log("✅ Service Worker ativo!");
   event.waitUntil(
@@ -36,7 +31,7 @@ self.addEventListener("activate", (event) => {
       Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log("🧹 Removendo cache antigo:", key);
+            console.log("🧹 Limpando cache antigo:", key);
             return caches.delete(key);
           }
         })
@@ -46,38 +41,21 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Intercepta requisições e serve do cache
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-
-        return fetch(event.request)
+    caches.match(event.request).then((cached) => {
+      return (
+        cached ||
+        fetch(event.request)
           .then((response) => {
-            if (!response || response.status !== 200 || response.type === "opaque") {
-              return response;
-            }
-
-            const clonedResponse = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clonedResponse);
-            });
+            if (!response || response.status !== 200) return response;
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
             return response;
           })
-          .catch(() => {
-            // Retorna página offline simples se desejar
-            return caches.match("./index.html");
-          });
-      })
+          .catch(() => caches.match("./index.html"))
+      );
+    })
   );
-});
-
-// Atualização imediata quando há nova versão
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
 });
