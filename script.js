@@ -1,5 +1,6 @@
 // ===================== UTILITÁRIOS =====================
 
+// Leitura e escrita segura no localStorage
 function carregarEventos() {
   try {
     return JSON.parse(localStorage.getItem("eventos")) || [];
@@ -22,17 +23,35 @@ function formatarDataSimples(data) {
   if (!data) return "Não definida";
   const d = new Date(data);
   if (isNaN(d)) return data;
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+// ===================== EFEITOS SONOROS =====================
+function playSound(name) {
+  const sounds = {
+    success: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q=="),
+    delete: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD")
+  };
+  const s = sounds[name];
+  if (s) {
+    s.currentTime = 0;
+    s.volume = 0.35;
+    s.play().catch(() => {});
+  }
 }
 
 // ===================== VIRADA / CHECKLIST =====================
-
 function definirViradaLote(idEvento) {
   const eventos = carregarEventos();
-  const ev = eventos.find(x => x.id === idEvento);
+  const ev = eventos.find((x) => x.id === idEvento);
   if (!ev) return alert("Evento não encontrado.");
 
-  const novaData = prompt("Digite a data da virada do lote (AAAA-MM-DD):", ev.viradaData || "");
+  const novaData = prompt(
+    "Digite a data da virada do lote (AAAA-MM-DD):",
+    ev.viradaData || ""
+  );
   if (!novaData) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(novaData))
     return alert("Formato inválido! Use AAAA-MM-DD.");
@@ -40,27 +59,25 @@ function definirViradaLote(idEvento) {
   ev.viradaData = novaData;
   ev.loteAtualizado = false;
   salvarEventos(eventos);
-  playSound?.("success");
-  renderEventos?.();
+  playSound("success");
+  renderEventos();
   alert("✅ Data de virada salva!");
 }
 
 function marcarLoteAtualizado(idEvento) {
   const eventos = carregarEventos();
-  const ev = eventos.find(x => x.id === idEvento);
+  const ev = eventos.find((x) => x.id === idEvento);
   if (!ev) return alert("Evento não encontrado.");
 
   ev.loteAtualizado = true;
   salvarEventos(eventos);
-  playSound?.("success");
-
+  playSound("success");
   const resp = confirm("✅ Lote marcado como atualizado!\nDeseja definir nova data?");
   if (resp) definirViradaLote(idEvento);
-  else renderEventos?.();
+  else renderEventos();
 }
 
 // ===================== PDF (ÚLTIMO LOTE) =====================
-
 async function baixarPDFUltimoLote(idEvento) {
   if (!window.jspdf) {
     alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente em alguns segundos.");
@@ -69,7 +86,7 @@ async function baixarPDFUltimoLote(idEvento) {
 
   const { jsPDF } = window.jspdf;
   const eventos = carregarEventos();
-  const ev = eventos.find(x => x.id === idEvento);
+  const ev = eventos.find((x) => x.id === idEvento);
   if (!ev) return alert("Evento não encontrado.");
   if (!ev.lotes || !ev.lotes.length)
     return alert("Nenhum lote cadastrado neste evento.");
@@ -100,14 +117,15 @@ async function baixarPDFUltimoLote(idEvento) {
         y = 20;
       }
     });
-  } else doc.text("Nenhum setor cadastrado neste lote.", 10, y);
+  } else {
+    doc.text("Nenhum setor cadastrado neste lote.", 10, y);
+  }
 
-  playSound?.("success");
+  playSound("success");
   doc.save(`${ev.nome}-Ultimo-Lote.pdf`);
 }
 
 // ===================== CRUD =====================
-
 function adicionarEvento(e) {
   const eventos = carregarEventos();
   eventos.push(e);
@@ -116,7 +134,7 @@ function adicionarEvento(e) {
 
 function atualizarEvento(ev) {
   const eventos = carregarEventos();
-  const i = eventos.findIndex(x => x.id === ev.id);
+  const i = eventos.findIndex((x) => x.id === ev.id);
   if (i !== -1) {
     eventos[i] = ev;
     salvarEventos(eventos);
@@ -125,37 +143,34 @@ function atualizarEvento(ev) {
 
 function excluirEvento(id) {
   if (!confirm("Excluir este evento?")) return;
-  let e = carregarEventos().filter(x => x.id !== id);
+  let e = carregarEventos().filter((x) => x.id !== id);
   salvarEventos(e);
-  playSound?.("click");
-  renderEventos?.();
+  playSound("delete");
+  renderEventos();
 }
 
 // ===================== RENDERIZAÇÃO =====================
-
 function criarCardEvento(ev) {
   const div = document.createElement("div");
   div.className = "evento-card";
 
   const h3 = document.createElement("h3");
   h3.textContent = ev.nome;
-
   const pData = document.createElement("p");
   pData.textContent = `Data: ${formatarDataSimples(ev.data)}`;
-
   const pLocal = document.createElement("p");
   pLocal.textContent = `Local: ${ev.local || "Não informado"}`;
-
   const pPag = document.createElement("p");
   pPag.textContent = `Pagamento: ${getPagamento(ev)}`;
-
   div.append(h3, pData, pLocal, pPag);
 
-  // --- Virada de lote ---
+  // Info de virada
   const info = document.createElement("p");
   info.classList.add("info-virada");
+  let txt = `🔄 Virada de Lote: ${
+    ev.viradaData ? formatarDataSimples(ev.viradaData) : "Não definida"
+  }`;
 
-  let txt = `🔄 Virada de Lote: ${ev.viradaData ? formatarDataSimples(ev.viradaData) : "Não definida"}`;
   if (ev.viradaData) {
     const hoje = new Date();
     const virada = new Date(ev.viradaData);
@@ -182,7 +197,7 @@ function criarCardEvento(ev) {
   info.appendChild(btnCheck);
   div.appendChild(info);
 
-  // --- Botões ---
+  // Botões de ação
   const btnEditar = document.createElement("button");
   btnEditar.textContent = "Editar Evento";
   btnEditar.onclick = () => abrirModalEdicao(ev.id);
@@ -225,30 +240,32 @@ function renderEventos() {
     lista.innerHTML = "<p>Nenhum evento cadastrado.</p>";
     return;
   }
-  eventos.forEach(ev => lista.appendChild(criarCardEvento(ev)));
+  eventos.forEach((ev) => lista.appendChild(criarCardEvento(ev)));
 }
 
 // ===================== EDITAR LOTE =====================
-
 function editarLoteAtual(idEvento) {
   const eventos = carregarEventos();
-  const ev = eventos.find(x => x.id === idEvento);
+  const ev = eventos.find((x) => x.id === idEvento);
   if (!ev || !ev.lotes?.length)
     return alert("Nenhum lote encontrado neste evento.");
+
   const ultimo = ev.lotes[ev.lotes.length - 1];
   const novoNome = prompt("Editar nome do lote:", ultimo.nome || "Novo Lote");
   if (!novoNome) return;
+
   ultimo.nome = novoNome;
   salvarEventos(eventos);
-  playSound?.("success");
+  playSound("success");
   renderEventos();
 }
 
 // ===================== BACKUP / RESTAURAÇÃO =====================
-
 function exportarBackup() {
   const dados = carregarEventos();
-  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(dados, null, 2)], {
+    type: "application/json",
+  });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "backup-eventos.json";
@@ -257,13 +274,13 @@ function exportarBackup() {
 
 function importarBackup(file) {
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (!Array.isArray(data)) throw new Error();
       salvarEventos(data);
-      playSound?.("success");
-      renderEventos?.();
+      playSound("success");
+      renderEventos();
       alert("✅ Backup importado com sucesso!");
     } catch {
       alert("Arquivo inválido.");
@@ -275,21 +292,20 @@ function importarBackup(file) {
 function limparDados() {
   if (!confirm("Limpar todos os eventos?")) return;
   localStorage.removeItem("eventos");
-  playSound?.("click");
-  renderEventos?.();
+  playSound("delete");
+  renderEventos();
 }
 
 function resetarSistema() {
   if (!confirm("Isso apagará TUDO. Continuar?")) return;
   localStorage.clear();
-  playSound?.("click");
+  playSound("delete");
   location.reload();
 }
 
 // ===================== MODAL DE EDIÇÃO =====================
-
 function abrirModalEdicao(id) {
-  const ev = carregarEventos().find(x => x.id === id);
+  const ev = carregarEventos().find((x) => x.id === id);
   if (!ev) return alert("Evento não encontrado.");
 
   document.getElementById("editId").value = ev.id;
@@ -297,7 +313,8 @@ function abrirModalEdicao(id) {
   document.getElementById("editData").value = ev.data;
   document.getElementById("editClassificacao").value = ev.classificacao || "";
   document.getElementById("editLocal").value = ev.local || "";
-  document.getElementById("editPagamento").value = ev.formasPagamento || ev.pagamento || "";
+  document.getElementById("editPagamento").value =
+    ev.formasPagamento || ev.pagamento || "";
   document.getElementById("editDescricao").value = ev.descricao || "";
   document.getElementById("modalEditar").style.display = "flex";
 }
@@ -307,49 +324,39 @@ function fecharModalEdicao() {
 }
 
 // ===================== INICIALIZAÇÃO =====================
-
 document.addEventListener("DOMContentLoaded", () => {
   const formEvento = document.getElementById("formEvento");
   const formEditar = document.getElementById("formEditar");
 
   if (formEvento)
-    formEvento.addEventListener("submit", e => {
+    formEvento.addEventListener("submit", (e) => {
       e.preventDefault();
-      const nomeEvento = document.getElementById("nomeEvento");
-      const dataEvento = document.getElementById("dataEvento");
-      const classificacao = document.getElementById("classificacao");
-      const localEvento = document.getElementById("localEvento");
-      const formasPagamento = document.getElementById("formasPagamento");
-      const descricao = document.getElementById("descricao");
-
       const evento = {
         id: Date.now(),
-        nome: nomeEvento?.value.trim() || "",
-        data: dataEvento?.value || "",
-        classificacao: classificacao?.value.trim() || "Livre",
-        local: localEvento?.value.trim() || "Não informado",
-        formasPagamento: formasPagamento?.value.trim() || "Não informado",
-        descricao: descricao?.value.trim() || "",
+        nome: nomeEvento.value.trim(),
+        data: dataEvento.value,
+        classificacao: classificacao.value.trim() || "Livre",
+        local: localEvento.value.trim() || "Não informado",
+        formasPagamento: formasPagamento.value.trim() || "Não informado",
+        descricao: descricao.value.trim() || "",
         lotes: [],
         viradaData: null,
-        loteAtualizado: false
+        loteAtualizado: false,
       };
-
       if (!evento.nome || !evento.data)
         return alert("Preencha nome e data.");
-
       adicionarEvento(evento);
-      playSound?.("success");
+      playSound("success");
       formEvento.reset();
       renderEventos();
     });
 
   if (formEditar)
-    formEditar.addEventListener("submit", e => {
+    formEditar.addEventListener("submit", (e) => {
       e.preventDefault();
       const id = Number(editId.value);
       const eventos = carregarEventos();
-      const ev = eventos.find(x => x.id === id);
+      const ev = eventos.find((x) => x.id === id);
       if (!ev) return alert("Evento não encontrado.");
       ev.nome = editNome.value.trim();
       ev.data = editData.value;
@@ -359,11 +366,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ev.pagamento = ev.formasPagamento;
       ev.descricao = editDescricao.value.trim();
       salvarEventos(eventos);
-      playSound?.("success");
+      playSound("success");
       fecharModalEdicao();
       renderEventos();
     });
 
+  // Botões
   const cancelar = document.getElementById("cancelarEdicao");
   const exportar = document.getElementById("btnExportar");
   const importar = document.getElementById("btnImportar");
