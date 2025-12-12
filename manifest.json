@@ -1,4 +1,32 @@
 {
+  "name": "Cadastro de Informações de Eventos",
+  "short_name": "Eventos",
+  "start_url": "/Cadastro-informa-es-de-eventos/index.html",
+  "scope": "/Cadastro-informa-es-de-eventos/",
+  "display": "standalone",
+  "background_color": "#0A0F1A",
+  "theme_color": "#1D4ED8",
+  "description": "Sistema offline de cadastro e gerenciamento de eventos e lotes, com geração automática de flyers e backup local.",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/Cadastro-informa-es-de-eventos/logo-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/Cadastro-informa-es-de-eventos/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/Cadastro-informa-es-de-eventos/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+{
   "name": "App de Cadastro de Evento",
   "short_name": "Eventos",
   "start_url": "index.html",
@@ -18,3 +46,4 @@
     }
   ]
 }
+
