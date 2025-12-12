@@ -1,6 +1,6 @@
 // ========================= VARIÁVEIS GLOBAIS =========================
 let eventos = JSON.parse(localStorage.getItem("eventos")) || [];
-let nomesSetores = JSON.parse(localStorage.getItem("nomesSetores")) || {}; // novo recurso
+let nomesSetores = JSON.parse(localStorage.getItem("nomesSetores")) || {}; // novos nomes de setor
 
 // ========================= SALVAR EVENTO =========================
 document.getElementById("formEvento").addEventListener("submit", (e) => {
@@ -186,21 +186,17 @@ function renderizarLotes(evento) {
       <h4>${lote.nome}</h4>
       ${aviso}
       <ul>
-        ${lote.setores
-          .map(
-            (s, i) => {
-              const idSetor = `${evento.id}-${index}-${i}`;
-              const nomeSetor = nomesSetores[idSetor] || s.setor;
-              return `<li id="setor-${idSetor}">
-                        <strong>${nomeSetor}</strong>
-                        — Meia: R$${s.valores.meia || "-"} |
-                        Solidário: R$${s.valores.solidario || "-"} |
-                        Inteira: R$${s.valores.inteira || "-"}
-                        <button onclick="editarNomeSetor('${idSetor}')">✏️</button>
-                      </li>`;
-            }
-          )
-          .join("")}
+        ${lote.setores.map((s, i) => {
+          const idSetor = `${evento.id}-${index}-${i}`;
+          const nomeSetor = nomesSetores[idSetor] || s.setor;
+          return `<li id="setor-${idSetor}">
+                    <strong>${nomeSetor}</strong>
+                    — Meia: R$${s.valores.meia || "-"} |
+                    Solidário: R$${s.valores.solidario || "-"} |
+                    Inteira: R$${s.valores.inteira || "-"}
+                    <button onclick="editarNomeSetor('${idSetor}')">✏️</button>
+                  </li>`;
+        }).join("")}
       </ul>
       <div class="lote-buttons">
         <button onclick="editarNomeLote(${evento.id}, ${index})">✏️ Editar Nome</button>
@@ -230,7 +226,7 @@ function editarNomeSetor(idSetor) {
   }
 }
 
-// ========================= EDITAR LOTE =========================
+// ========================= EDIÇÃO DE LOTES =========================
 function editarNomeLote(id, index) {
   const evento = eventos.find((e) => e.id === id);
   const novoNome = prompt("Novo nome do lote:", evento.lotes[index].nome);
@@ -251,86 +247,90 @@ function editarQtdLotes(id) {
   }
 }
 
-// ========================= GERAR FLYERS =========================
-function imprimirUltimoLote(eventoId, tipo) {
+// ========================= GERAR FLYER (PDF) =========================
+async function imprimirUltimoLote(eventoId, tipo) {
   const evento = eventos.find(e => e.id === eventoId);
   if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
 
-  console.log(`🖨️ Gerando flyer ${tipo} para ${evento.nome}...`);
-  alert(`Flyer ${tipo.toUpperCase()} do evento ${evento.nome} gerado com sucesso!`);
-}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("landscape", "px", [842, 595]);
 
-function imprimirFlyerStory(eventoId) {
-  const evento = eventos.find(e => e.id === eventoId);
-  if (!evento) return alert("Evento não encontrado.");
-  alert(`Story Flyer de ${evento.nome} gerado com sucesso!`);
-}
+  // Fundo
+  if (tipo === "escuro") {
+    doc.setFillColor(10, 15, 26);
+  } else {
+    doc.setFillColor(245, 245, 245);
+  }
+  doc.rect(0, 0, 842, 595, "F");
 
-// ========================= VISUALIZAR FLYER =========================
-function visualizarFlyer(eventoId) {
-  const evento = eventos.find(e => e.id === eventoId);
-  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+  // Título
+  doc.setTextColor(tipo === "escuro" ? 255 : 0, tipo === "escuro" ? 255 : 0, tipo === "escuro" ? 255 : 0);
+  doc.setFontSize(26);
+  doc.text(evento.nome, 421, 60, { align: "center" });
+
   const ultimoLote = evento.lotes[evento.lotes.length - 1];
-  const canvas = document.getElementById("canvasPreview");
-  const ctx = canvas.getContext("2d");
-  const modal = document.getElementById("modalFlyer");
-  const fechar = document.getElementById("btnFecharPreview");
+  doc.setFontSize(18);
+  doc.text(`Lote: ${ultimoLote.nome}`, 421, 90, { align: "center" });
+  doc.setFontSize(14);
+  doc.text(`Virada: ${ultimoLote.dataVirada}`, 421, 110, { align: "center" });
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  gradient.addColorStop(0, "#0A0F1A");
-  gradient.addColorStop(1, "#1E293B");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Setores
+  let y = 150;
+  ultimoLote.setores.forEach((s) => {
+    doc.setDrawColor(200);
+    doc.rect(100, y - 20, 642, 50);
+    doc.text(s.setor.toUpperCase(), 421, y + 5, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(`Meia: R$${s.valores.meia || "-"}`, 220, y + 25);
+    doc.text(`Solidário: R$${s.valores.solidario || "-"}`, 390, y + 25);
+    doc.text(`Inteira: R$${s.valores.inteira || "-"}`, 580, y + 25);
+    y += 60;
+  });
 
+  // Marca d’água
   if (evento.imagem) {
     const img = new Image();
     img.src = evento.imagem;
-    img.onload = () => {
-      const scale = Math.min(0.9 * canvas.width / img.width, 0.9 * canvas.height / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      const x = (canvas.width - w) / 2;
-      const y = (canvas.height - h) / 2;
-      ctx.globalAlpha = 0.1;
-      ctx.drawImage(img, x, y, w, h);
-      ctx.globalAlpha = 1.0;
-      desenhar();
-    };
-  } else desenhar();
-
-  function desenhar() {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 32px Poppins";
-    ctx.textAlign = "center";
-    ctx.fillText(evento.nome, canvas.width / 2, 70);
-    ctx.font = "bold 22px Poppins";
-    ctx.fillText(`Lote: ${ultimoLote.nome}`, canvas.width / 2, 110);
-    ctx.font = "16px Poppins";
-    ctx.fillText(`Virada de lote: ${ultimoLote.dataVirada}`, canvas.width / 2, 140);
-
-    let y = 180;
-    ultimoLote.setores.forEach((s, i) => {
-      const idSetor = `${evento.id}-${ultimoLote.nome}-${i}`;
-      const nomeSetor = nomesSetores[idSetor] || s.setor;
-
-      ctx.fillStyle = "rgba(30,40,60,0.8)";
-      ctx.fillRect(100, y - 20, 640, 50);
-      ctx.fillStyle = "#92C5FF";
-      ctx.font = "bold 18px Poppins";
-      ctx.fillText(nomeSetor.toUpperCase(), canvas.width / 2, y);
-      ctx.font = "14px Poppins";
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(`Meia: R$ ${s.valores.meia || "-"}`, 250, y + 25);
-      ctx.fillText(`Solidário: R$ ${s.valores.solidario || "-"}`, 420, y + 25);
-      ctx.fillText(`Inteira: R$ ${s.valores.inteira || "-"}`, 600, y + 25);
-      y += 70;
-    });
+    await img.decode();
+    doc.addImage(img, "PNG", 150, 100, 540, 350, "", "NONE", 0.1);
   }
 
-  modal.style.display = "flex";
-  fechar.onclick = () => modal.style.display = "none";
-  window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+  doc.save(`${evento.nome}-${tipo}.pdf`);
+}
+
+// ========================= STORY FLYER (PDF VERTICAL) =========================
+async function imprimirFlyerStory(eventoId) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("portrait", "px", [1080, 1920]);
+
+  doc.setFillColor(10, 15, 26);
+  doc.rect(0, 0, 1080, 1920, "F");
+  doc.setTextColor(255, 255, 255);
+
+  doc.setFontSize(46);
+  doc.text(evento.nome, 540, 120, { align: "center" });
+  const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  doc.setFontSize(30);
+  doc.text(`Lote: ${ultimoLote.nome}`, 540, 180, { align: "center" });
+  doc.setFontSize(22);
+  doc.text(`Virada: ${ultimoLote.dataVirada}`, 540, 210, { align: "center" });
+
+  let y = 340;
+  ultimoLote.setores.forEach((s) => {
+    doc.setDrawColor(80);
+    doc.rect(120, y - 50, 840, 120);
+    doc.setFontSize(26);
+    doc.text(s.setor.toUpperCase(), 540, y, { align: "center" });
+    doc.setFontSize(20);
+    doc.text(`Meia: R$${s.valores.meia || "-"}`, 260, y + 50);
+    doc.text(`Solidário: R$${s.valores.solidario || "-"}`, 520, y + 50);
+    doc.text(`Inteira: R$${s.valores.inteira || "-"}`, 800, y + 50);
+    y += 150;
+  });
+
+  doc.save(`${evento.nome}-story.pdf`);
 }
 
 // ========================= BACKUP / RESTAURAÇÃO =========================
