@@ -55,12 +55,8 @@
       click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q==")
     };
     function playSound(name) {
-      const sound = sounds[name];
-      if (sound) {
-        sound.currentTime = 0;
-        sound.volume = 0.35;
-        sound.play().catch(() => {});
-      }
+      const s = sounds[name];
+      if (s) { s.currentTime = 0; s.volume = 0.35; s.play().catch(()=>{}); }
     }
 
     // === Tema ===
@@ -80,24 +76,21 @@
       };
     });
 
-    // === Splash seguro (sempre some) ===
+    // === Splash seguro ===
     document.addEventListener("DOMContentLoaded", () => {
       const s = document.getElementById("splash");
       setTimeout(() => {
         if (s) {
           s.style.opacity = "0";
-          s.style.visibility = "hidden";
+          s.addEventListener("transitionend", () => s.remove());
         }
       }, 2000);
     });
 
-    // === Dados seguros ===
+    // === Dados ===
     let eventos = [];
-    try {
-      eventos = JSON.parse(localStorage.getItem("eventos")) || [];
-    } catch (e) {
-      eventos = [];
-    }
+    try { eventos = JSON.parse(localStorage.getItem("eventos")) || []; }
+    catch { eventos = []; }
 
     const idSelecionado = Number(localStorage.getItem("eventoSelecionado")) || 0;
     const evento = eventos.find((e) => e.id === idSelecionado);
@@ -105,11 +98,12 @@
     if (!evento) {
       console.warn("Evento não encontrado, voltando...");
       setTimeout(() => (window.location.href = "index.html"), 800);
+      return; // impede execução do restante
     }
 
-    document.getElementById("tituloEvento").textContent = evento?.nome || "Evento não encontrado";
+    document.getElementById("tituloEvento").textContent = evento.nome;
     document.getElementById("dataEvento").textContent =
-      "Data: " + (evento?.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
+      "Data: " + (evento.data ? new Date(evento.data).toLocaleDateString("pt-BR") : "Indefinida");
 
     const listaLotes = document.getElementById("listaLotes");
     const secaoSetores = document.getElementById("secaoSetores");
@@ -142,9 +136,10 @@
     }
 
     function abrirLote(i) {
+      const lote = evento.lotes[i];
+      if (!lote) return alert("Lote não encontrado.");
       secaoSetores.style.display = "block";
       listaSetores.innerHTML = "";
-      const lote = evento.lotes[i];
       document.getElementById("tituloLote").textContent = "Editando: " + lote.nome;
       listaSetores.dataset.index = i;
       (lote.setores || []).forEach((s, idx) => {
@@ -172,10 +167,7 @@
       const i = Number(listaSetores.dataset.index);
       if (i >= 0) {
         evento.lotes[i].setores = evento.lotes[i].setores || [];
-        evento.lotes[i].setores.push({
-          setor: "Novo Setor",
-          valores: { meia: 0, solidario: 0, inteira: 0 }
-        });
+        evento.lotes[i].setores.push({ setor: "Novo Setor", valores: { meia: 0, solidario: 0, inteira: 0 } });
         salvar();
         abrirLote(i);
       }
@@ -210,44 +202,36 @@
       renderLotes();
     }
 
-    // === PDF do Lote Atual com verificação ===
+    // === PDF do Lote Atual ===
     async function gerarPDFLoteAtual() {
-      if (!window.jspdf) {
-        alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente em alguns segundos.");
-        return;
-      }
+      if (!window.jspdf) return alert("⚠️ O gerador de PDF ainda está carregando. Tente novamente.");
       const { jsPDF } = window.jspdf;
       const i = Number(listaSetores.dataset.index);
       if (isNaN(i)) return alert("Nenhum lote aberto.");
       const lote = evento.lotes[i];
       const doc = new jsPDF();
-      doc.setFont("helvetica", "bold");
+      doc.setFont("helvetica","bold");
       doc.setFontSize(18);
-      doc.text(evento.nome, 10, 20);
-      doc.setFont("helvetica", "normal");
+      doc.text(evento.nome,10,20);
       doc.setFontSize(12);
-      doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`, 10, 30);
-      doc.text(`Lote Atual: ${lote.nome}`, 10, 45);
-      let y = 60;
-      doc.setFont("helvetica", "normal");
-      if (lote.setores?.length) {
-        lote.setores.forEach((s, idx) => {
-          doc.text(`${idx + 1}. ${s.setor}`, 10, y);
-          doc.text(`Meia: R$ ${s.valores.meia}`, 70, y);
-          doc.text(`Solidário: R$ ${s.valores.solidario}`, 110, y);
-          doc.text(`Inteira: R$ ${s.valores.inteira}`, 160, y);
-          y += 10;
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
+      doc.setFont("helvetica","normal");
+      doc.text(`Data do Evento: ${new Date(evento.data).toLocaleDateString("pt-BR")}`,10,30);
+      doc.text(`Lote Atual: ${lote.nome}`,10,45);
+      let y=60;
+      if(lote.setores?.length){
+        lote.setores.forEach((s,idx)=>{
+          doc.text(`${idx+1}. ${s.setor}`,10,y);
+          doc.text(`Meia: R$ ${s.valores.meia}`,70,y);
+          doc.text(`Solidário: R$ ${s.valores.solidario}`,110,y);
+          doc.text(`Inteira: R$ ${s.valores.inteira}`,160,y);
+          y+=10;if(y>270){doc.addPage();y=20;}
         });
-      } else doc.text("Nenhum setor cadastrado neste lote.", 10, y);
+      }else doc.text("Nenhum setor cadastrado neste lote.",10,y);
       playSound("click");
       doc.save(`${evento.nome}-${lote.nome}.pdf`);
     }
 
-    // === Botões principais ===
+    // === Botões ===
     document.getElementById("btnNovoLote").onclick = () => {
       const nome = prompt("Nome do novo lote:");
       if (!nome) return;
