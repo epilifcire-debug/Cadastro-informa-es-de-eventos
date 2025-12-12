@@ -191,116 +191,100 @@ function editarQtdLotes(eventoId) {
   alert('Quantidade de lotes atualizada!');
 }
 
-// === IMPRESSÃO (DOIS MODOS) ===
+// === IMPRESSÃO (ESCURA / CLARA) ===
 function imprimirUltimoLote(eventoId, modo = 'escuro') {
   const evento = eventos.find(e => e.id === eventoId);
   if (!evento || !evento.lotes.length) return alert('Nenhum lote encontrado.');
   const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
 
-  import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(jsPDF => {
-    const { jsPDF: JSPDF } = jsPDF;
-    const doc = new JSPDF('p', 'mm', 'a4');
+  if (modo === 'escuro') {
+    // FLYER ESCURO
+    const canvas = document.createElement('canvas');
+    canvas.width = 595;
+    canvas.height = 842;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 842);
+    gradient.addColorStop(0, '#0A0F1A');
+    gradient.addColorStop(1, '#1E293B');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 595, 842);
+    const imgData = canvas.toDataURL('image/png');
+    doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
 
-    if (modo === 'escuro') {
-      // Fundo gradiente escuro
-      const canvas = document.createElement('canvas');
-      canvas.width = 595;
-      canvas.height = 842;
-      const ctx = canvas.getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 842);
-      gradient.addColorStop(0, '#0A0F1A');
-      gradient.addColorStop(1, '#1E293B');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 595, 842);
-      const imgData = canvas.toDataURL('image/png');
-      doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    doc.setDrawColor(66, 165, 245);
+    doc.rect(8, 8, 194, 281);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(24);
+    doc.setTextColor(66, 165, 245);
+    doc.text(evento.nome, 105, 30, { align: 'center' });
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`🎟️ ${ultimoLote.nome}`, 105, 45, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Virada de lote: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
+    doc.line(20, 60, 190, 60);
 
-      // Moldura
-      doc.setDrawColor(66, 165, 245);
-      doc.setLineWidth(1.2);
-      doc.rect(8, 8, 194, 281);
-
+    let y = 75;
+    ultimoLote.setores.forEach(s => {
+      doc.setFillColor(18, 24, 38);
+      doc.roundedRect(20, y - 8, 170, 25, 3, 3, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
-      doc.setTextColor(66, 165, 245);
-      doc.text(evento.nome, 105, 30, { align: 'center' });
-
-      doc.setFontSize(16);
-      doc.setTextColor(255, 255, 255);
-      doc.text(`🎟️ ${ultimoLote.nome}`, 105, 45, { align: 'center' });
-      doc.setFontSize(12);
-      doc.text(`Virada de lote: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
-
-      doc.setDrawColor(66, 165, 245);
-      doc.line(20, 60, 190, 60);
-
-      let y = 75;
-      ultimoLote.setores.forEach((s) => {
-        doc.setFillColor(18, 24, 38);
-        doc.roundedRect(20, y - 8, 170, 25, 3, 3, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(146, 197, 255);
-        doc.setFontSize(14);
-        doc.text(s.setor.toUpperCase(), 25, y + 2);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(12);
-        doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
-        doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
-        doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
-        y += 32;
-      });
-
-      doc.setTextColor(120, 150, 255);
-      doc.setFontSize(10);
-      doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
-    } 
-    else {
-      // Fundo branco - modo econômico
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, 210, 297, 'F');
-      doc.setDrawColor(66, 165, 245);
-      doc.rect(8, 8, 194, 281);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(30, 45, 75);
-      doc.text(evento.nome, 105, 30, { align: 'center' });
-
+      doc.setTextColor(146, 197, 255);
       doc.setFontSize(14);
-      doc.text(`Lote: ${ultimoLote.nome}`, 105, 45, { align: 'center' });
+      doc.text(s.setor.toUpperCase(), 25, y + 2);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
+      doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
+      doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
+      y += 32;
+    });
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 150, 255);
+    doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
+  } else {
+    // VERSÃO CLARA
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, 210, 297, 'F');
+    doc.setDrawColor(66, 165, 245);
+    doc.rect(8, 8, 194, 281);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(30, 45, 75);
+    doc.text(evento.nome, 105, 30, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`Lote: ${ultimoLote.nome}`, 105, 45, { align: 'center' });
+    doc.setFontSize(11);
+    doc.text(`Virada: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
+    doc.line(20, 60, 190, 60);
+
+    let y = 75;
+    ultimoLote.setores.forEach(s => {
+      doc.setDrawColor(200, 200, 200);
+      doc.roundedRect(20, y - 8, 170, 25, 3, 3);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(13);
+      doc.text(s.setor.toUpperCase(), 25, y + 2);
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
-      doc.text(`Virada: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
+      doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
+      doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
+      doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
+      y += 32;
+    });
 
-      doc.line(20, 60, 190, 60);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
+  }
 
-      let y = 75;
-      ultimoLote.setores.forEach((s) => {
-        doc.setDrawColor(200, 200, 200);
-        doc.roundedRect(20, y - 8, 170, 25, 3, 3);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(13);
-        doc.text(s.setor.toUpperCase(), 25, y + 2);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
-        doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
-        doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
-        y += 32;
-      });
-
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
-    }
-
-    // Salvar PDF
-    const nomeArquivo = modo === 'escuro' ? 'Flyer_Escuro' : 'Flyer_Claro';
-    doc.save(`${nomeArquivo}_${ultimoLote.nome.replace(/\s+/g, '_')}.pdf`);
-  });
+  const nomeArquivo = modo === 'escuro' ? 'Flyer_Escuro' : 'Flyer_Claro';
+  doc.save(`${nomeArquivo}_${ultimoLote.nome.replace(/\s+/g, '_')}.pdf`);
 }
 
 // === BACKUP / IMPORTAÇÃO / RESET ===
@@ -348,7 +332,7 @@ document.getElementById('btnResetar').addEventListener('click', () => {
   }
 });
 
-// === EDIÇÃO DE EVENTO (MODAL) ===
+// === MODAL DE EDIÇÃO ===
 const modal = document.getElementById('modalEditar');
 const formEditar = document.getElementById('formEditar');
 const cancelarEdicao = document.getElementById('cancelarEdicao');
