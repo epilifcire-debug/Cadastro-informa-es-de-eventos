@@ -1,89 +1,75 @@
-// ===== SERVICE WORKER INTELIGENTE v3 =====
-// Atualiza automaticamente quando há nova versão no GitHub Pages
+// ======= SERVICE WORKER (PWA OFFLINE CACHE) =======
 
-const CACHE_NAME = 'eventos-local-v3';
-const FILES_TO_CACHE = [
-  './',
-  './index.html',
-  './style.css',
-  './script.js',
-  './manifest.json',
-  './img/logo.png'
+const CACHE_NAME = "eventos-pwa-v3";
+const urlsToCache = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./script.js",
+  "./manifest.json",
+  "./img/logo.png",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
 ];
 
-// ===== INSTALAÇÃO =====
-self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando nova versão:', CACHE_NAME);
+// ======= INSTALAÇÃO =======
+self.addEventListener("install", (event) => {
+  console.log("📦 Instalando Service Worker...");
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Pré-carregando arquivos...');
-        return cache.addAll(FILES_TO_CACHE);
+        console.log("✅ Cache criado com sucesso!");
+        return cache.addAll(urlsToCache);
       })
-      .then(() => self.skipWaiting())
+      .catch((err) => console.error("❌ Erro ao criar cache:", err))
   );
 });
 
-// ===== ATIVAÇÃO =====
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando nova versão e limpando antigas...');
+// ======= ATIVAÇÃO =======
+self.addEventListener("activate", (event) => {
+  console.log("🚀 Service Worker ativo!");
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[SW] Excluindo cache antigo:', key);
-            return caches.delete(key);
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) {
+            console.log("🧹 Limpando cache antigo:", name);
+            return caches.delete(name);
           }
         })
       );
     })
   );
-  self.clients.claim();
 });
 
-// ===== FETCH (ONLINE FIRST, FALLBACK OFFLINE) =====
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-
+// ======= INTERCEPTAÇÃO DE REQUISIÇÕES =======
+self.addEventListener("fetch", (event) => {
   event.respondWith(
-    fetch(event.request)
+    caches.match(event.request)
       .then((response) => {
-        if (!response || response.status !== 200) return response;
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
+        // Retorna do cache ou busca online
+        return response || fetch(event.request).then((fetchResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            // Atualiza cache com nova resposta se for seguro
+            if (event.request.url.startsWith("http") && !event.request.url.includes("chrome-extension")) {
+              cache.put(event.request, fetchResponse.clone());
+            }
+            return fetchResponse;
+          });
         });
-        return response;
       })
       .catch(() => {
-        return caches.match(event.request)
-          .then((cached) => cached || caches.match('./index.html'));
+        // Retorno offline padrão
+        if (event.request.mode === "navigate") {
+          return caches.match("./index.html");
+        }
       })
   );
 });
 
-// ===== ATUALIZAÇÃO AUTOMÁTICA DETECTADA =====
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'CHECK_FOR_UPDATE') {
-    fetch('./manifest.json')
-      .then((response) => response.text())
-      .then((newManifest) => {
-        caches.match('./manifest.json').then((oldCache) => {
-          if (!oldCache) return;
-          oldCache.text().then((oldManifest) => {
-            if (newManifest !== oldManifest) {
-              console.log('[SW] Nova versão detectada!');
-              event.source.postMessage({ type: 'UPDATE_AVAILABLE' });
-            }
-          });
-        });
-      })
-      .catch((err) => console.warn('[SW] Falha ao verificar atualização:', err));
-  }
-
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('[SW] Atualização forçada...');
+// ======= ATUALIZAÇÃO AUTOMÁTICA =======
+self.addEventListener("message", (event) => {
+  if (event.data === "updateSW") {
+    console.log("♻️ Atualizando Service Worker...");
     self.skipWaiting();
   }
 });
