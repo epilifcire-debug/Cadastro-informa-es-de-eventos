@@ -6,6 +6,10 @@
   font-family: "Poppins", sans-serif;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: #0A0F1A;
   color: #E3F2FD;
@@ -75,6 +79,7 @@ main {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.8s ease, transform 0.8s ease;
+  will-change: opacity, transform;
 }
 
 .card.show {
@@ -119,6 +124,10 @@ button:hover {
 
 .btn-cancelar:hover {
   background-color: #8E0000;
+}
+
+body.light-mode button {
+  color: #fff;
 }
 
 /* ======= FORMULÁRIOS ======= */
@@ -183,7 +192,8 @@ body.light-mode #splash {
 }
 
 body.light-mode #splash-text {
-  color: #1565C0;
+  color: #0D47A1;
+  text-shadow: 0 0 4px rgba(0,0,0,0.1);
 }
 
 /* ======= ANIMAÇÃO DO BOTÃO DE TEMA ======= */
@@ -215,8 +225,8 @@ body.light-mode #themeToggle.animate {
 }
 
 @keyframes piscar {
-  0% {color: #FF5252; transform: scale(1);}
-  100% {color: #FF0000; transform: scale(1.08);}
+  0% { color: #FF5252; opacity: 0.8; }
+  100% { color: #FF0000; opacity: 1; }
 }
 
 .lote-ok {
@@ -289,6 +299,14 @@ body.light-mode .modal-content {
   gap: 10px;
 }
 
+/* Responsividade para telas baixas */
+@media (max-height: 500px) {
+  .modal-content {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
 /* ======= RODAPÉ ======= */
 footer {
   text-align: center;
@@ -301,4 +319,11 @@ footer {
 body.light-mode footer {
   background: rgba(255, 255, 255, 0.8);
   color: #0A0F1A;
+}
+
+/* ======= ALTO CONTRASTE ======= */
+@media (prefers-contrast: more) {
+  button, input, textarea {
+    border: 2px solid currentColor;
+  }
 }
