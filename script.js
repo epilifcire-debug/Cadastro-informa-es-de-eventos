@@ -1,383 +1,347 @@
-// ===== SISTEMA DE EVENTOS LOCAL =====
-let eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+// ========================= VARIÁVEIS GLOBAIS =========================
+let eventos = JSON.parse(localStorage.getItem("eventos")) || [];
 
-const formEvento = document.getElementById('formEvento');
-const listaEventos = document.getElementById('listaEventos');
-
-// === SALVAR NOVO EVENTO ===
-formEvento.addEventListener('submit', (e) => {
+// ========================= SALVAR EVENTO =========================
+document.getElementById("formEvento").addEventListener("submit", (e) => {
   e.preventDefault();
-  const evento = {
+
+  const nome = document.getElementById("nomeEvento").value.trim();
+  const data = document.getElementById("dataEvento").value;
+  const classificacao = document.getElementById("classificacao").value;
+  const localEvento = document.getElementById("localEvento").value;
+  const formasPagamento = document.getElementById("formasPagamento").value;
+  const descricao = document.getElementById("descricao").value;
+  const imagemInput = document.getElementById("imagemEvento");
+
+  if (!nome || !data) return alert("Preencha todos os campos obrigatórios!");
+
+  const novoEvento = {
     id: Date.now(),
-    nome: nomeEvento.value.trim(),
-    data: dataEvento.value,
-    classificacao: classificacao.value.trim(),
-    local: localEvento.value.trim(),
-    pagamento: formasPagamento.value.trim(),
-    descricao: descricao.value.trim(),
-    lotes: []
+    nome,
+    data,
+    classificacao,
+    local: localEvento,
+    formasPagamento,
+    descricao,
+    lotes: [],
+    imagem: null
   };
 
-  if (!evento.nome) return alert("Preencha o nome do evento!");
-
-  eventos.push(evento);
-  salvarLocal();
-  formEvento.reset();
-  renderEventos();
+  if (imagemInput.files && imagemInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      novoEvento.imagem = e.target.result;
+      eventos.push(novoEvento);
+      salvarEventos();
+      atualizarLista();
+      document.getElementById("formEvento").reset();
+    };
+    reader.readAsDataURL(imagemInput.files[0]);
+  } else {
+    eventos.push(novoEvento);
+    salvarEventos();
+    atualizarLista();
+    document.getElementById("formEvento").reset();
+  }
 });
 
-// === RENDERIZAR EVENTOS ===
-function renderEventos() {
-  listaEventos.innerHTML = '';
+// ========================= SALVAR LOCALSTORAGE =========================
+function salvarEventos() {
+  localStorage.setItem("eventos", JSON.stringify(eventos));
+}
 
-  if (eventos.length === 0) {
-    listaEventos.innerHTML = '<p>Nenhum evento cadastrado.</p>';
-    return;
-  }
+// ========================= ATUALIZAR LISTA =========================
+function atualizarLista() {
+  const lista = document.getElementById("listaEventos");
+  lista.innerHTML = "";
 
-  eventos.forEach(ev => {
-    const div = document.createElement('div');
-    div.classList.add('evento-card');
-    div.innerHTML = `
-      <h3>${ev.nome}</h3>
-      <p><b>Data:</b> ${ev.data}</p>
-      <p><b>Local:</b> ${ev.local}</p>
+  eventos.forEach((evento) => {
+    const divEvento = document.createElement("div");
+    divEvento.classList.add("card");
 
-      <button onclick="gerenciarLotes(${ev.id})">Gerenciar Setores e Lotes</button>
-      <button onclick="visualizarLotes(${ev.id})">Visualizar Lotes</button>
-      <button onclick="editarEvento(${ev.id})">Editar</button>
-      <button onclick="excluirEvento(${ev.id})">Excluir</button>
-
-      <div id="lotes-${ev.id}" class="lotes-container" style="display:none;"></div>
+    divEvento.innerHTML = `
+      <h3>${evento.nome}</h3>
+      <p>📅 ${evento.data}</p>
+      <p>🏛️ ${evento.local || "Não informado"}</p>
+      <p>💳 ${evento.formasPagamento || "-"}</p>
+      <p>${evento.classificacao ? "🎟️ " + evento.classificacao : ""}</p>
+      <p>${evento.descricao || ""}</p>
+      <button onclick="adicionarLote(${evento.id})">➕ Adicionar Lote</button>
+      <div id="lotes-${evento.id}"></div>
     `;
-    listaEventos.appendChild(div);
+
+    lista.appendChild(divEvento);
+    renderizarLotes(evento);
   });
 }
 
-// === EXCLUIR EVENTO ===
-function excluirEvento(id) {
-  eventos = eventos.filter(e => e.id !== id);
-  salvarLocal();
-  renderEventos();
-}
-
-// === SALVAR LOCALMENTE ===
-function salvarLocal() {
-  localStorage.setItem('eventos', JSON.stringify(eventos));
-}
-
-// === GERENCIAMENTO DE LOTES ===
-function gerenciarLotes(id) {
+// ========================= ADICIONAR LOTE =========================
+function adicionarLote(id) {
   const evento = eventos.find(e => e.id === id);
-  if (!evento) return;
+  const nome = prompt("Nome do lote:");
+  if (!nome) return;
+  const dataVirada = prompt("Data da virada do lote (AAAA-MM-DD):");
+  if (!dataVirada) return;
 
-  const nomeLote = prompt('Digite o nome do lote:');
-  if (!nomeLote) return;
-
-  const dataVirada = prompt('Digite a data de virada do lote (AAAA-MM-DD):');
-  if (!dataVirada) return alert('Data de virada é obrigatória!');
-
-  const setores = prompt('Digite os setores (separados por vírgula):');
-  if (!setores) return;
-
-  const setoresArray = setores.split(',').map(s => s.trim());
-  const lote = { nome: nomeLote, dataVirada, setores: [], checklist: false };
-
-  setoresArray.forEach(setor => {
-    const meia = prompt(`Valor MEIA do setor "${setor}"`);
-    const solidario = prompt(`Valor SOLIDÁRIO do setor "${setor}"`);
-    const inteira = prompt(`Valor INTEIRA do setor "${setor}"`);
-
-    lote.setores.push({
+  const setores = [];
+  let continuar = true;
+  while (continuar) {
+    const setor = prompt("Nome do setor (ou deixe vazio para encerrar):");
+    if (!setor) break;
+    const meia = prompt("Valor Meia:");
+    const solidario = prompt("Valor Solidário:");
+    const inteira = prompt("Valor Inteira:");
+    setores.push({
       setor,
       valores: { meia, solidario, inteira }
     });
-  });
-
-  evento.lotes.push(lote);
-  salvarLocal();
-  alert('✅ Lote salvo com sucesso!');
-}
-
-// === VISUALIZAR LOTES ===
-function visualizarLotes(id) {
-  const evento = eventos.find(e => e.id === id);
-  const container = document.getElementById(`lotes-${id}`);
-  if (!evento || !container) return;
-
-  const aberto = container.style.display === 'block';
-  container.style.display = aberto ? 'none' : 'block';
-  if (aberto) return;
-
-  if (!evento.lotes.length) {
-    container.innerHTML = '<p>Nenhum lote cadastrado.</p>';
-    return;
+    continuar = confirm("Adicionar outro setor?");
   }
 
-  container.innerHTML = '';
+  evento.lotes.push({ nome, dataVirada, setores });
+  salvarEventos();
+  atualizarLista();
+}
+
+// ========================= RENDERIZAR LOTES =========================
+function renderizarLotes(evento) {
+  const container = document.getElementById(`lotes-${evento.id}`);
+  container.innerHTML = "";
+
   evento.lotes.forEach((lote, index) => {
-    const divLote = document.createElement('div');
-    divLote.classList.add('lote-card');
+    const divLote = document.createElement("div");
+    divLote.classList.add("lote-card");
 
     const dataAtual = new Date();
     const dataVirada = new Date(lote.dataVirada);
-    const diasRestantes = Math.ceil((dataVirada - dataAtual) / (1000 * 60 * 60 * 24));
-    let aviso = '';
-    if (diasRestantes <= 0) {
-      aviso = `<p class="aviso-vermelho">⚠️ Lote expirado em ${lote.dataVirada}</p>`;
-    } else if (diasRestantes <= 3) {
-      aviso = `<p class="aviso-vermelho piscando">⚠️ Virada de lote em ${lote.dataVirada}</p>`;
-    } else {
-      aviso = `<p class="aviso-vermelho">⚠️ Virada de lote em ${lote.dataVirada}</p>`;
-    }
+    const diff = Math.ceil((dataVirada - dataAtual) / (1000 * 3600 * 24));
 
-    let setoresHTML = '';
-    lote.setores.forEach(s => {
-      setoresHTML += `
-        <div class="setor-item">
-          <h4>${s.setor}</h4>
-          <p><b>Meia:</b> R$ ${s.valores.meia || '-'}</p>
-          <p><b>Solidário:</b> R$ ${s.valores.solidario || '-'}</p>
-          <p><b>Inteira:</b> R$ ${s.valores.inteira || '-'}</p>
-        </div>
-      `;
-    });
+    const aviso =
+      diff <= 0
+        ? `<p class="aviso-vermelho piscando">⚠️ Lote expirado! Crie o próximo!</p>`
+        : diff <= 3
+        ? `<p class="aviso-vermelho piscando">⏰ Faltam ${diff} dias para virar o lote!</p>`
+        : `<p style="color:lightgreen">✅ Próxima virada: ${lote.dataVirada}</p>`;
 
-    const checkId = `check-${id}-${index}`;
     divLote.innerHTML = `
-      <h3>${lote.nome || `Lote ${index + 1}`}</h3>
+      <h4>${lote.nome}</h4>
       ${aviso}
-      ${setoresHTML}
-      <div class="checklist">
-        <label><input type="checkbox" id="${checkId}" ${lote.checklist ? 'checked' : ''}> Novo lote já cadastrado</label>
-      </div>
+      <ul>
+        ${lote.setores
+          .map(
+            (s) => `
+          <li><strong>${s.setor}</strong> — Meia: R$${s.valores.meia || "-"} | Solidário: R$${s.valores.solidario || "-"} | Inteira: R$${s.valores.inteira || "-"}</li>
+        `
+          )
+          .join("")}
+      </ul>
       <div class="lote-buttons">
-        <button onclick="editarNomeLote(${id}, ${index})">Editar Nome</button>
-        <button onclick="editarQtdLotes(${id})">Editar Quantidade</button>
-        <button onclick="imprimirUltimoLote(${id}, 'escuro')">🖤 Flyer Escuro</button>
-        <button onclick="imprimirUltimoLote(${id}, 'claro')">🤍 Versão Clara</button>
+        <button onclick="editarNomeLote(${evento.id}, ${index})">✏️ Editar Nome</button>
+        <button onclick="editarQtdLotes(${evento.id})"># Editar Quantidade</button>
+        <button onclick="imprimirUltimoLote(${evento.id}, 'escuro')">🖤 Flyer Escuro</button>
+        <button onclick="imprimirUltimoLote(${evento.id}, 'claro')">🤍 Versão Clara</button>
+        <button onclick="imprimirFlyerStory(${evento.id})">📱 Story Flyer</button>
+        <button onclick="visualizarFlyer(${evento.id})">👁️ Visualizar Flyer</button>
       </div>
-      <hr>
     `;
-    container.appendChild(divLote);
 
-    const checkbox = divLote.querySelector(`#${checkId}`);
-    checkbox.addEventListener('change', () => {
-      lote.checklist = checkbox.checked;
-      salvarLocal();
-    });
+    container.appendChild(divLote);
   });
 }
 
-// === EDITAR NOME DO LOTE ===
-function editarNomeLote(eventoId, loteIndex) {
-  const evento = eventos.find(e => e.id === eventoId);
-  if (!evento) return;
-  const novoNome = prompt('Digite o novo nome do lote:');
-  if (!novoNome) return;
-  evento.lotes[loteIndex].nome = novoNome;
-  salvarLocal();
-  renderEventos();
+// ========================= EDITAR NOME DO LOTE =========================
+function editarNomeLote(id, index) {
+  const evento = eventos.find((e) => e.id === id);
+  const novoNome = prompt("Novo nome do lote:", evento.lotes[index].nome);
+  if (novoNome) {
+    evento.lotes[index].nome = novoNome;
+    salvarEventos();
+    atualizarLista();
+  }
 }
 
-// === EDITAR QUANTIDADE DE LOTES ===
-function editarQtdLotes(eventoId) {
-  const evento = eventos.find(e => e.id === eventoId);
-  if (!evento) return;
-  const novaQtd = prompt('Digite a nova quantidade total de lotes:');
-  if (!novaQtd || isNaN(novaQtd)) return alert('Digite um número válido.');
-  evento.qtdLotes = Number(novaQtd);
-  salvarLocal();
-  alert('Quantidade de lotes atualizada!');
+// ========================= EDITAR QUANTIDADE DE LOTES =========================
+function editarQtdLotes(id) {
+  const evento = eventos.find((e) => e.id === id);
+  const qtd = parseInt(prompt("Nova quantidade de lotes:", evento.lotes.length));
+  if (!isNaN(qtd) && qtd >= 0) {
+    evento.lotes = evento.lotes.slice(0, qtd);
+    salvarEventos();
+    atualizarLista();
+  }
 }
 
-// === IMPRESSÃO (ESCURA / CLARA) ===
-function imprimirUltimoLote(eventoId, modo = 'escuro') {
-  const evento = eventos.find(e => e.id === eventoId);
-  if (!evento || !evento.lotes.length) return alert('Nenhum lote encontrado.');
+// ========================= FLYER STORY (16:9) =========================
+function imprimirFlyerStory(eventoId) {
+  const evento = eventos.find((e) => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
   const ultimoLote = evento.lotes[evento.lotes.length - 1];
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4');
+  const doc = new jsPDF("l", "mm", "a4");
 
-  if (modo === 'escuro') {
-    // FLYER ESCURO
-    const canvas = document.createElement('canvas');
-    canvas.width = 595;
-    canvas.height = 842;
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 842);
-    gradient.addColorStop(0, '#0A0F1A');
-    gradient.addColorStop(1, '#1E293B');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 595, 842);
-    const imgData = canvas.toDataURL('image/png');
-    doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+  const canvas = document.createElement("canvas");
+  canvas.width = 842;
+  canvas.height = 595;
+  const ctx = canvas.getContext("2d");
 
-    doc.setDrawColor(66, 165, 245);
-    doc.rect(8, 8, 194, 281);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
+  const gradient = ctx.createLinearGradient(0, 0, 842, 0);
+  gradient.addColorStop(0, "#0A0F1A");
+  gradient.addColorStop(1, "#1E293B");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 842, 595);
+
+  if (evento.imagem) {
+    const img = new Image();
+    img.src = evento.imagem;
+    img.onload = () => {
+      const scale = Math.min(
+        0.9 * canvas.width / img.width,
+        0.9 * canvas.height / img.height
+      );
+      const w = img.width * scale;
+      const h = img.height * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
+      ctx.globalAlpha = 0.1;
+      ctx.drawImage(img, x, y, w, h);
+      ctx.globalAlpha = 1;
+      desenhar();
+    };
+  } else desenhar();
+
+  function desenhar() {
+    const bgData = canvas.toDataURL("image/png");
+    doc.addImage(bgData, "PNG", 0, 0, 297, 210);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(26);
     doc.setTextColor(66, 165, 245);
-    doc.text(evento.nome, 105, 30, { align: 'center' });
-    doc.setFontSize(16);
+    doc.text(evento.nome, 148, 40, { align: "center" });
+    doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
-    doc.text(`🎟️ ${ultimoLote.nome}`, 105, 45, { align: 'center' });
+    doc.text(`🎟️ ${ultimoLote.nome}`, 148, 60, { align: "center" });
     doc.setFontSize(12);
-    doc.text(`Virada de lote: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
-    doc.line(20, 60, 190, 60);
+    doc.text(`Virada de lote: ${ultimoLote.dataVirada}`, 148, 72, { align: "center" });
 
-    let y = 75;
-    ultimoLote.setores.forEach(s => {
+    let y = 95;
+    ultimoLote.setores.forEach((s) => {
       doc.setFillColor(18, 24, 38);
-      doc.roundedRect(20, y - 8, 170, 25, 3, 3, 'F');
-      doc.setFont('helvetica', 'bold');
+      doc.roundedRect(40, y - 8, 220, 25, 3, 3, "F");
+      doc.setFont("helvetica", "bold");
       doc.setTextColor(146, 197, 255);
-      doc.setFontSize(14);
-      doc.text(s.setor.toUpperCase(), 25, y + 2);
-      doc.setFont('helvetica', 'normal');
+      doc.text(s.setor.toUpperCase(), 45, y + 2);
+      doc.setFont("helvetica", "normal");
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
-      doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
-      doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
+      doc.text(`Meia: R$ ${s.valores.meia || "-"}`, 45, y + 10);
+      doc.text(`Solidário: R$ ${s.valores.solidario || "-"}`, 120, y + 10);
+      doc.text(`Inteira: R$ ${s.valores.inteira || "-"}`, 200, y + 10);
       y += 32;
     });
 
-    doc.setFontSize(10);
-    doc.setTextColor(120, 150, 255);
-    doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
-  } else {
-    // VERSÃO CLARA
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, 210, 297, 'F');
-    doc.setDrawColor(66, 165, 245);
-    doc.rect(8, 8, 194, 281);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.setTextColor(30, 45, 75);
-    doc.text(evento.nome, 105, 30, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(`Lote: ${ultimoLote.nome}`, 105, 45, { align: 'center' });
-    doc.setFontSize(11);
-    doc.text(`Virada: ${ultimoLote.dataVirada}`, 105, 55, { align: 'center' });
-    doc.line(20, 60, 190, 60);
-
-    let y = 75;
-    ultimoLote.setores.forEach(s => {
-      doc.setDrawColor(200, 200, 200);
-      doc.roundedRect(20, y - 8, 170, 25, 3, 3);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(13);
-      doc.text(s.setor.toUpperCase(), 25, y + 2);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.text(`Meia: R$ ${s.valores.meia || '-'}`, 25, y + 10);
-      doc.text(`Solidário: R$ ${s.valores.solidario || '-'}`, 90, y + 10);
-      doc.text(`Inteira: R$ ${s.valores.inteira || '-'}`, 150, y + 10);
-      y += 32;
-    });
-
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Gerado automaticamente pelo sistema de eventos', 105, 285, { align: 'center' });
+    const nomeArquivo = `Flyer_Story_${evento.nome.replace(/\s+/g, "_")}_${ultimoLote.nome.replace(/\s+/g, "_")}.pdf`;
+    doc.save(nomeArquivo);
   }
-
-  const nomeArquivo = modo === 'escuro' ? 'Flyer_Escuro' : 'Flyer_Claro';
-  doc.save(`${nomeArquivo}_${ultimoLote.nome.replace(/\s+/g, '_')}.pdf`);
 }
 
-// === BACKUP / IMPORTAÇÃO / RESET ===
-document.getElementById('btnExportar').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(eventos, null, 2)], { type: 'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'backup-eventos.json';
-  link.click();
-});
+// ========================= VISUALIZAR FLYER (MODAL) =========================
+function visualizarFlyer(eventoId) {
+  const evento = eventos.find(e => e.id === eventoId);
+  if (!evento || !evento.lotes.length) return alert("Nenhum lote encontrado.");
+  const ultimoLote = evento.lotes[evento.lotes.length - 1];
+  const canvas = document.getElementById("canvasPreview");
+  const ctx = canvas.getContext("2d");
+  const modal = document.getElementById("modalFlyer");
+  const fechar = document.getElementById("btnFecharPreview");
 
-document.getElementById('btnImportar').addEventListener('click', () => {
-  const file = document.getElementById('importarBackup').files[0];
-  if (!file) return alert('Selecione um arquivo JSON válido.');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#0A0F1A");
+  gradient.addColorStop(1, "#1E293B");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (evento.imagem) {
+    const img = new Image();
+    img.src = evento.imagem;
+    img.onload = () => {
+      const scale = Math.min(0.9 * canvas.width / img.width, 0.9 * canvas.height / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
+      ctx.globalAlpha = 0.1;
+      ctx.drawImage(img, x, y, w, h);
+      ctx.globalAlpha = 1.0;
+      desenhar();
+    };
+  } else desenhar();
+
+  function desenhar() {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 32px Poppins";
+    ctx.textAlign = "center";
+    ctx.fillText(evento.nome, canvas.width / 2, 70);
+    ctx.font = "bold 22px Poppins";
+    ctx.fillText(`🎟️ ${ultimoLote.nome}`, canvas.width / 2, 110);
+    ctx.font = "16px Poppins";
+    ctx.fillText(`Virada de lote: ${ultimoLote.dataVirada}`, canvas.width / 2, 140);
+
+    let y = 180;
+    ultimoLote.setores.forEach((s) => {
+      ctx.fillStyle = "rgba(30,40,60,0.8)";
+      ctx.fillRect(100, y - 20, 640, 50);
+      ctx.fillStyle = "#92C5FF";
+      ctx.font = "bold 18px Poppins";
+      ctx.fillText(s.setor.toUpperCase(), canvas.width / 2, y);
+      ctx.font = "14px Poppins";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(`Meia: R$ ${s.valores.meia || "-"}`, 250, y + 25);
+      ctx.fillText(`Solidário: R$ ${s.valores.solidario || "-"}`, 420, y + 25);
+      ctx.fillText(`Inteira: R$ ${s.valores.inteira || "-"}`, 600, y + 25);
+      y += 70;
+    });
+  }
+
+  modal.style.display = "flex";
+  fechar.onclick = () => modal.style.display = "none";
+  window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+}
+
+// ========================= BACKUP E RESTAURAÇÃO =========================
+document.getElementById("btnExportar").onclick = () => {
+  const blob = new Blob([JSON.stringify(eventos, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "backup_eventos.json";
+  a.click();
+};
+
+document.getElementById("btnImportar").onclick = () => {
+  const file = document.getElementById("importarBackup").files[0];
+  if (!file) return alert("Selecione um arquivo primeiro!");
   const reader = new FileReader();
   reader.onload = (e) => {
-    try {
-      const dados = JSON.parse(e.target.result);
-      if (!Array.isArray(dados)) throw new Error();
-      eventos = dados;
-      salvarLocal();
-      renderEventos();
-      alert('Backup importado com sucesso!');
-    } catch {
-      alert('Erro ao importar arquivo.');
-    }
+    eventos = JSON.parse(e.target.result);
+    salvarEventos();
+    atualizarLista();
   };
   reader.readAsText(file);
-});
+};
 
-document.getElementById('btnLimpar').addEventListener('click', () => {
-  if (confirm('Tem certeza que deseja apagar todos os dados locais?')) {
-    localStorage.removeItem('eventos');
+document.getElementById("btnLimpar").onclick = () => {
+  if (confirm("Tem certeza que deseja limpar todos os dados?")) {
+    localStorage.removeItem("eventos");
     eventos = [];
-    renderEventos();
+    atualizarLista();
   }
-});
+};
 
-document.getElementById('btnResetar').addEventListener('click', () => {
-  if (confirm('⚠️ Deseja realmente RESETAR TODO o sistema?')) {
+document.getElementById("btnResetar").onclick = () => {
+  if (confirm("Deseja resetar o sistema completamente?")) {
     localStorage.clear();
     eventos = [];
-    renderEventos();
-    alert('✅ Sistema totalmente resetado!');
+    location.reload();
   }
-});
+};
 
-// === MODAL DE EDIÇÃO ===
-const modal = document.getElementById('modalEditar');
-const formEditar = document.getElementById('formEditar');
-const cancelarEdicao = document.getElementById('cancelarEdicao');
-
-function editarEvento(id) {
-  const evento = eventos.find(e => e.id === id);
-  if (!evento) return;
-
-  document.getElementById('editId').value = evento.id;
-  document.getElementById('editNome').value = evento.nome;
-  document.getElementById('editData').value = evento.data;
-  document.getElementById('editClassificacao').value = evento.classificacao;
-  document.getElementById('editLocal').value = evento.local;
-  document.getElementById('editPagamento').value = evento.pagamento;
-  document.getElementById('editDescricao').value = evento.descricao;
-
-  modal.style.display = 'flex';
-}
-
-cancelarEdicao.addEventListener('click', () => {
-  modal.style.display = 'none';
-});
-
-formEditar.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const id = Number(document.getElementById('editId').value);
-  const evento = eventos.find(e => e.id === id);
-  if (!evento) return;
-
-  evento.nome = document.getElementById('editNome').value.trim();
-  evento.data = document.getElementById('editData').value.trim();
-  evento.classificacao = document.getElementById('editClassificacao').value.trim();
-  evento.local = document.getElementById('editLocal').value.trim();
-  evento.pagamento = document.getElementById('editPagamento').value.trim();
-  evento.descricao = document.getElementById('editDescricao').value.trim();
-
-  salvarLocal();
-  renderEventos();
-  modal.style.display = 'none';
-  alert('Evento atualizado com sucesso!');
-});
-
-window.addEventListener('click', (e) => {
-  if (e.target === modal) modal.style.display = 'none';
-});
-
-// === INICIALIZA ===
-renderEventos();
+// ========================= INICIALIZAR =========================
+atualizarLista();
