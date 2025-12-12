@@ -8,7 +8,52 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A0F1A">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* ======= Destaque de Virada ======= */
+    .info-virada {
+      color: #FF5252;
+      font-weight: bold;
+      margin-top: 6px;
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .alerta-virada {
+      animation: piscar 1s infinite alternate;
+    }
+
+    @keyframes piscar {
+      0% { color: #FF5252; transform: scale(1); }
+      100% { color: #FF0000; transform: scale(1.08); }
+    }
+
+    .btn-check {
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 6px 10px;
+      margin-left: 10px;
+      transition: 0.3s;
+    }
+
+    .btn-check:hover {
+      background-color: #388E3C;
+    }
+
+    .lote-ok {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+  </style>
 </head>
+
 <body>
   <header>
     <img src="img/logo.png" alt="Logo" class="logo">
@@ -113,7 +158,49 @@
   <script src="script.js"></script>
 
   <script>
-    // Função para baixar PDF do evento
+    // ======= Formatar data =======
+    function formatarDataSimples(data) {
+      if (!data) return "Não definida";
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    // ======= Virada de Lote =======
+    function definirViradaLote(idEvento) {
+      const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+      const evento = eventos.find(e => e.id === idEvento);
+      if (!evento) return alert("Evento não encontrado.");
+
+      const novaData = prompt("Digite a data da virada do lote (AAAA-MM-DD):", evento.viradaData || "");
+      if (!novaData) return;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(novaData)) {
+        alert("Formato inválido! Use AAAA-MM-DD.");
+        return;
+      }
+
+      evento.viradaData = novaData;
+      evento.loteAtualizado = false;
+      localStorage.setItem("eventos", JSON.stringify(eventos));
+      renderEventos();
+      alert("✅ Data de virada de lote salva!");
+    }
+
+    // ======= Checklist de Lote Atualizado =======
+    function marcarLoteAtualizado(idEvento) {
+      const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+      const evento = eventos.find(e => e.id === idEvento);
+      if (!evento) return alert("Evento não encontrado.");
+
+      evento.loteAtualizado = true;
+      localStorage.setItem("eventos", JSON.stringify(eventos));
+
+      const resposta = confirm("✅ Lote marcado como atualizado!\nDeseja definir uma nova data de virada?");
+      if (resposta) definirViradaLote(idEvento);
+      else renderEventos();
+    }
+
+    // ======= PDF =======
     async function baixarPDF(idEvento) {
       const { jsPDF } = window.jspdf;
       const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
@@ -121,7 +208,6 @@
       if (!evento) return alert("Evento não encontrado!");
 
       const doc = new jsPDF();
-
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
       doc.text(evento.nome, 10, 20);
@@ -132,19 +218,19 @@
       doc.text(`Local: ${evento.local}`, 10, 38);
       doc.text(`Classificação: ${evento.classificacao || "Não informada"}`, 10, 46);
       doc.text(`Pagamento: ${evento.pagamento || "Não informado"}`, 10, 54);
+      if (evento.viradaData) doc.text(`Virada de Lote: ${formatarDataSimples(evento.viradaData)}`, 10, 62);
 
-      doc.text("Descrição:", 10, 64);
+      doc.text("Descrição:", 10, 72);
       const descricao = evento.descricao || "Nenhuma descrição informada.";
       const linhasDesc = doc.splitTextToSize(descricao, 180);
-      doc.text(linhasDesc, 10, 70);
+      doc.text(linhasDesc, 10, 78);
 
-      let y = 90;
+      let y = 100;
       if (evento.lotes.length) {
         doc.setFont("helvetica", "bold");
         doc.text("Lotes e Setores:", 10, y);
         y += 8;
         evento.lotes.forEach((lote, i) => {
-          doc.setFont("helvetica", "bold");
           doc.text(`${i + 1}. ${lote.nome}`, 10, y);
           y += 6;
           doc.setFont("helvetica", "normal");
@@ -163,26 +249,75 @@
       doc.save(`${evento.nome}.pdf`);
     }
 
-    // Ajuste: adiciona o botão "Baixar PDF" dinamicamente
+    // ======= Renderização =======
     const oldRenderEventos = window.renderEventos;
     window.renderEventos = function() {
       oldRenderEventos();
-      // Inserir botão "Baixar PDF" em cada evento
+
       document.querySelectorAll('.evento-card').forEach(div => {
         const idText = div.querySelector('button').getAttribute('onclick');
-        const id = idText.match(/\d+/)[0];
-        const btn = document.createElement('button');
-        btn.textContent = 'Baixar PDF';
-        btn.onclick = () => baixarPDF(Number(id));
-        div.appendChild(btn);
+        const id = Number(idText.match(/\d+/)[0]);
+        const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+        const evento = eventos.find(e => e.id === id);
+
+        const infoVirada = document.createElement('p');
+        infoVirada.classList.add('info-virada');
+
+        let texto = `🔄 Virada de Lote: ${evento?.viradaData ? formatarDataSimples(evento.viradaData) : "Não definida"}`;
+
+        // Verifica se está próxima
+        if (evento.viradaData) {
+          const hoje = new Date();
+          const virada = new Date(evento.viradaData);
+          const diffDias = Math.ceil((virada - hoje) / (1000 * 60 * 60 * 24));
+
+          if (diffDias <= 3 && diffDias >= 0) {
+            infoVirada.classList.add('alerta-virada');
+            texto = `⚠️ Virada em ${diffDias} dia${diffDias !== 1 ? 's' : ''}! (${formatarDataSimples(evento.viradaData)})`;
+          } else if (diffDias < 0) {
+            texto = `🚨 Lote já virou em ${formatarDataSimples(evento.viradaData)}!`;
+            infoVirada.classList.add('alerta-virada');
+          }
+        }
+
+        // Se já foi atualizado
+        if (evento.loteAtualizado) {
+          texto = `✅ Lote atualizado (${evento.viradaData ? formatarDataSimples(evento.viradaData) : "sem data"})`;
+          infoVirada.classList.remove('alerta-virada');
+          infoVirada.classList.add('lote-ok');
+        }
+
+        infoVirada.textContent = texto;
+
+        // Botão checklist
+        const btnCheck = document.createElement('button');
+        btnCheck.textContent = '✅';
+        btnCheck.classList.add('btn-check');
+        btnCheck.title = 'Marcar lote como atualizado';
+        btnCheck.onclick = () => marcarLoteAtualizado(id);
+
+        infoVirada.appendChild(btnCheck);
+        div.insertBefore(infoVirada, div.children[3]);
+
+        // Botão Virada
+        const btnVirada = document.createElement('button');
+        btnVirada.textContent = 'Virada de Lote';
+        btnVirada.onclick = () => definirViradaLote(id);
+        div.appendChild(btnVirada);
+
+        // Botão PDF
+        const btnPDF = document.createElement('button');
+        btnPDF.textContent = 'Baixar PDF';
+        btnPDF.onclick = () => baixarPDF(id);
+        div.appendChild(btnPDF);
       });
     };
 
-    // Registro do Service Worker
+    // ======= Service Worker =======
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("✅ Service Worker registrado com sucesso!"))
-        .catch(err => console.log("❌ Erro ao registrar Service Worker:", err));
+        .then(() => console.log("✅ Service Worker registrado"))
+        .catch(err => console.log("❌ Erro ao registrar SW:", err));
     }
   </script>
 </body>
