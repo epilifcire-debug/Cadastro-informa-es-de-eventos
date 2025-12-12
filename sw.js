@@ -1,6 +1,6 @@
 // ===================== SERVICE WORKER PWA =====================
 
-const CACHE_NAME = "eventos-pwa-v5";
+const CACHE_NAME = "eventos-pwa-v6";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
@@ -15,10 +15,10 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
   );
-  self.skipWaiting(); // ativa o SW imediatamente
+  self.skipWaiting(); // força ativação imediata do novo SW
 });
 
-// Ativação: limpa caches antigos e assume controle das páginas
+// Ativação: limpa caches antigos e assume controle das páginas abertas
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
@@ -29,20 +29,25 @@ self.addEventListener("activate", (event) => {
       )
     )
   );
-  self.clients.claim(); // controla páginas abertas
+  self.clients.claim(); // o novo SW controla todas as abas ativas
 });
 
 // Fetch: estratégia cache-first com fallback para rede
 self.addEventListener("fetch", (event) => {
+  // Ignora requisições não-HTTP (ex: chrome-extension, data:, blob:)
+  if (!event.request.url.startsWith("http")) return;
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) return response;
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
 
       return fetch(event.request)
         .then((networkResponse) => {
+          // Cacheia apenas respostas válidas (status 200) e método GET
           if (
             event.request.method === "GET" &&
-            event.request.url.startsWith("http")
+            networkResponse &&
+            networkResponse.status === 200
           ) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, networkResponse.clone());
@@ -51,7 +56,7 @@ self.addEventListener("fetch", (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // Fallback offline para navegação e imagens
+          // Fallback para uso offline
           if (event.request.destination === "image") {
             return caches.match("./img/logo.png");
           }
