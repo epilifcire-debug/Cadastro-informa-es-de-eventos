@@ -1,142 +1,216 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>App de Cadastro de Evento</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0A0F1A" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciar Lotes</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A0F1A">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-
 <body>
   <!-- SPLASH -->
   <div id="splash">
-    <img src="img/logo.png" alt="Logo" id="splash-logo" />
+    <img src="img/logo.png" alt="Logo" id="splash-logo">
     <h2 id="splash-text">Carregando...</h2>
   </div>
 
   <header>
-    <img src="img/logo.png" alt="Logo" class="logo" />
-    <h1>App de Cadastro de Evento</h1>
+    <img src="img/logo.png" alt="Logo" class="logo">
+    <h1>Gerenciar Lotes</h1>
     <button id="themeToggle">☀️ Modo Claro</button>
   </header>
 
   <main>
     <section class="card">
-      <h2>Cadastrar Novo Evento</h2>
-      <form id="formEvento">
-        <label>Nome do Evento</label>
-        <input type="text" id="nomeEvento" required />
+      <h2 id="tituloEvento">Evento</h2>
+      <p id="dataEvento"></p>
+      <hr>
 
-        <label>Data do Evento</label>
-        <input type="date" id="dataEvento" required />
+      <h3>Lotes Cadastrados</h3>
+      <div id="listaLotes"></div>
 
-        <label>Classificação</label>
-        <input type="text" id="classificacao" />
-
-        <label>Local</label>
-        <input type="text" id="localEvento" />
-
-        <label>Formas de Pagamento</label>
-        <input type="text" id="formasPagamento" placeholder="Pix, Cartão, Dinheiro..." />
-
-        <label>Descrição</label>
-        <textarea id="descricao"></textarea>
-
-        <button type="submit" class="btn-salvar">Salvar Evento</button>
-      </form>
+      <button id="btnNovoLote">➕ Novo Lote</button>
+      <button id="voltar">⬅️ Voltar</button>
     </section>
 
-    <section class="card">
-      <h2>Eventos Cadastrados</h2>
-      <div id="listaEventos"></div>
-    </section>
-
-    <section class="card">
-      <h2>Backup & Restauração</h2>
-      <button id="btnExportar">Exportar Backup</button>
-      <input type="file" id="importarBackup" accept=".json" />
-      <button id="btnImportar">Importar Backup</button>
-      <button id="btnLimpar">Limpar Dados</button>
-      <button id="btnResetar" class="btn-resetar">Resetar Sistema</button>
+    <section class="card" id="secaoSetores" style="display:none;">
+      <h3 id="tituloLote">Editar Lote</h3>
+      <div id="listaSetores"></div>
+      <button id="btnAddSetor">➕ Adicionar Setor</button>
+      <button id="btnSalvarLote">💾 Salvar Lote</button>
+      <button id="btnFecharLote">❌ Fechar</button>
     </section>
   </main>
 
-  <footer><p>Desenvolvido por Eric Filipe</p></footer>
+  <footer>
+    <p>Gerenciamento de Lotes | Desenvolvido por Eric Filipe</p>
+  </footer>
 
-  <div id="modalEditar" class="modal">
-    <div class="modal-content">
-      <h2>Editar Evento</h2>
-      <form id="formEditar">
-        <input type="hidden" id="editId" />
-        <label>Nome do Evento</label>
-        <input type="text" id="editNome" required />
-        <label>Data do Evento</label>
-        <input type="date" id="editData" required />
-        <label>Classificação</label>
-        <input type="text" id="editClassificacao" />
-        <label>Local</label>
-        <input type="text" id="editLocal" />
-        <label>Formas de Pagamento</label>
-        <input type="text" id="editPagamento" />
-        <label>Descrição</label>
-        <textarea id="editDescricao"></textarea>
-        <div class="modal-buttons">
-          <button type="submit" class="btn-salvar">Salvar Alterações</button>
-          <button type="button" id="cancelarEdicao" class="btn-cancelar">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-
-  <!-- Sons + Tema + Splash + SW -->
+  <!-- === Script === -->
   <script>
-    /* --- Sons --- */
+    // Funções de som (importadas do index principal)
     const sounds = {
-      click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q=="),
-      pop: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAYAAADAQEAAAAAAAAAAAAAAAAAAgMEBf/EAB0QAAMAAgIDAAAAAAAAAAAAAAABAgMEBQYREjH/2gAMAwEAAhADEAAAAfDULHHCHBLmAzz3zrb0HDL//Z"),
-      success: new Audio("data:audio/mp3;base64,//uQxAARAAABP5bX1pRkAAAF5AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEBAQEBAQAAAAAAAAAAAAAAAwQFAgb/xAAlEAABBAICAwEAAAAAAAAAAAABAAIDEQQFBhITITFRImEy/9oADAMBAAIRAxEAPwB9VRnCQiCMEAvqAQXfVv2UK1F1D0nP//Z"),
-      delete: new Audio("data:audio/mp3;base64,//uQxAARAAABO5bX1pRkAAAF5AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAYAAADAQEAAAAAAAAAAAAAAAAABAUHA//EAB4QAAEEAwEBAAAAAAAAAAAAAAEAAwQFERIhMXGB/9oADAMBAAIRAxEAPwCENgVlBIEAIBVBX7wX3X1iJAZx8AEs9uf//Z")
+      click: new Audio("data:audio/mp3;base64,//uQxAAACAAf5f7p6VUEAAAB9AAABpAAABAAABHCAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAACAAADSAAAAJAAAAEAAASAAABGgAAAA//uQZAAAAEoAAD6AAAAgAAAAgAAAAIAAAAD/7kGQAAABKAAA+gAAAIAAAACAAAAAgAAAAD//2wBDAAICAgICAgMCAgMEAwMDBAYEBAQEBAgGBgUGCQgKCgkICQsJDAwMDAwMEAwQDAwMEA8PDwwNDg4ODw4PDA0NDf/AABEIAKgBLAMBIgACEQEDEQH/xAAZAAEAAwEBAAAAAAAAAAAAAAAABAUGAwH/xAAhEAABAwMFAQEAAAAAAAAAAAAAAQIDBAUREiExUWEGQf/EABgBAAIDAAAAAAAAAAAAAAAAAAQBAgMF/8QAGREAAwEBAQAAAAAAAAAAAAAAAAECERJB/9oADAMBAAIRAxEAPwCVL7Mmy1oSRgAABBBxjjvtu/hVhbUeZ7ZmgFZB8dyjnvfIaSu+Vv1OzCh0//2Q==")
     };
-    function playSound(n){const s=sounds[n];if(s){s.currentTime=0;s.volume=0.35;s.play().catch(()=>{});}}
+    function playSound(name) {
+      const sound = sounds[name];
+      if (sound) { sound.currentTime = 0; sound.volume = 0.35; sound.play().catch(()=>{}); }
+    }
 
-    /* --- Tema --- */
+    // === Tema claro/escuro ===
     document.addEventListener("DOMContentLoaded",()=>{
-      const b=document.body,btn=document.getElementById("themeToggle");
+      const themeButton=document.getElementById("themeToggle");
+      const body=document.body;
       const saved=localStorage.getItem("theme");
-      if(saved==="light"){b.classList.add("light-mode");btn.textContent="🌙 Modo Escuro";}
-      btn.addEventListener("click",()=>{
-        b.classList.toggle("light-mode");
-        const l=b.classList.contains("light-mode");
-        btn.textContent=l?"🌙 Modo Escuro":"☀️ Modo Claro";
-        localStorage.setItem("theme",l?"light":"dark");
+      if(saved==="light"){body.classList.add("light-mode");themeButton.textContent="🌙 Modo Escuro";}
+      themeButton.addEventListener("click",()=>{
+        body.classList.toggle("light-mode");
+        const light=body.classList.contains("light-mode");
+        themeButton.textContent=light?"🌙 Modo Escuro":"☀️ Modo Claro";
+        localStorage.setItem("theme",light?"light":"dark");
         playSound("click");
-        btn.classList.add("animate");
-        setTimeout(()=>btn.classList.remove("animate"),400);
       });
     });
 
-    /* --- Splash --- */
+    // === Splash ===
     document.addEventListener("DOMContentLoaded",()=>{
       const splash=document.getElementById("splash");
-      const cards=document.querySelectorAll(".card");
-      setTimeout(()=>{
-        playSound("pop");
-        splash.style.opacity="0";
-        splash.style.visibility="hidden";
-        cards.forEach((c,i)=>setTimeout(()=>c.classList.add("show"),300*i));
-      },2000);
+      setTimeout(()=>{ splash.style.opacity="0"; splash.style.visibility="hidden"; },1500);
     });
 
-    /* --- SW --- */
-    if("serviceWorker" in navigator)
-      navigator.serviceWorker.register("sw.js")
-        .then(()=>console.log("✅ Service Worker registrado"))
-        .catch(e=>console.log("❌ Erro SW:",e));
+    // === Dados ===
+    const eventos = JSON.parse(localStorage.getItem("eventos")) || [];
+    const idSelecionado = Number(localStorage.getItem("eventoSelecionado"));
+    const evento = eventos.find(e => e.id === idSelecionado);
+
+    if(!evento){
+      alert("Evento não encontrado!");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("tituloEvento").textContent = evento.nome;
+    document.getElementById("dataEvento").textContent = "Data: " + (new Date(evento.data).toLocaleDateString("pt-BR"));
+
+    const listaLotes = document.getElementById("listaLotes");
+    const secaoSetores = document.getElementById("secaoSetores");
+    const listaSetores = document.getElementById("listaSetores");
+
+    function renderLotes(){
+      listaLotes.innerHTML = "";
+      if(!evento.lotes || !evento.lotes.length){
+        listaLotes.innerHTML = "<p>Nenhum lote cadastrado.</p>";
+        return;
+      }
+      evento.lotes.forEach((lote, i)=>{
+        const div = document.createElement("div");
+        div.classList.add("lote-card");
+        div.innerHTML = `
+          <h4>${lote.nome}</h4>
+          <p>${lote.setores?.length || 0} setor(es)</p>
+          <button onclick="abrirLote(${i})">Editar</button>
+          <button onclick="excluirLote(${i})" class="btn-cancelar">Excluir</button>
+        `;
+        listaLotes.appendChild(div);
+      });
+    }
+
+    function abrirLote(i){
+      secaoSetores.style.display = "block";
+      listaSetores.innerHTML = "";
+      const lote = evento.lotes[i];
+      document.getElementById("tituloLote").textContent = "Editando: " + lote.nome;
+      listaSetores.dataset.index = i;
+      (lote.setores || []).forEach((s, idx)=>{
+        const div = document.createElement("div");
+        div.classList.add("setor");
+        div.innerHTML = `
+          <input type="text" value="${s.setor}" placeholder="Nome do setor">
+          <input type="number" value="${s.valores.meia}" placeholder="Meia">
+          <input type="number" value="${s.valores.solidario}" placeholder="Solidário">
+          <input type="number" value="${s.valores.inteira}" placeholder="Inteira">
+          <button onclick="removerSetor(${idx})" class="btn-cancelar">🗑</button>
+        `;
+        listaSetores.appendChild(div);
+      });
+    }
+
+    function excluirLote(i){
+      if(!confirm("Excluir este lote?")) return;
+      evento.lotes.splice(i,1);
+      salvar();
+      renderLotes();
+    }
+
+    function salvar(){
+      const eventos = JSON.parse(localStorage.getItem("eventos")) || [];
+      const idx = eventos.findIndex(e => e.id === evento.id);
+      eventos[idx] = evento;
+      localStorage.setItem("eventos", JSON.stringify(eventos));
+    }
+
+    function adicionarSetor(){
+      const i = Number(listaSetores.dataset.index);
+      if(i >= 0){
+        evento.lotes[i].setores = evento.lotes[i].setores || [];
+        evento.lotes[i].setores.push({
+          setor: "Novo Setor",
+          valores: {meia:0, solidario:0, inteira:0}
+        });
+        salvar();
+        abrirLote(i);
+      }
+    }
+
+    function removerSetor(idx){
+      const i = Number(listaSetores.dataset.index);
+      evento.lotes[i].setores.splice(idx,1);
+      salvar();
+      abrirLote(i);
+    }
+
+    function salvarLote(){
+      const i = Number(listaSetores.dataset.index);
+      const inputs = listaSetores.querySelectorAll(".setor");
+      const setores = [];
+      inputs.forEach(div=>{
+        const [setor, meia, solid, inte] = div.querySelectorAll("input");
+        setores.push({
+          setor: setor.value.trim() || "Setor",
+          valores: {
+            meia: Number(meia.value) || 0,
+            solidario: Number(solid.value) || 0,
+            inteira: Number(inte.value) || 0
+          }
+        });
+      });
+      evento.lotes[i].setores = setores;
+      salvar();
+      alert("✅ Lote salvo com sucesso!");
+      secaoSetores.style.display = "none";
+      renderLotes();
+    }
+
+    document.getElementById("btnNovoLote").onclick = ()=>{
+      const nome = prompt("Nome do novo lote:");
+      if(!nome) return;
+      evento.lotes = evento.lotes || [];
+      evento.lotes.push({ nome, setores: [] });
+      salvar();
+      renderLotes();
+    };
+
+    document.getElementById("btnAddSetor").onclick = adicionarSetor;
+    document.getElementById("btnSalvarLote").onclick = salvarLote;
+    document.getElementById("btnFecharLote").onclick = ()=>{
+      secaoSetores.style.display="none";
+    };
+    document.getElementById("voltar").onclick = ()=>{
+      window.location.href = "index.html";
+    };
+
+    renderLotes();
   </script>
 </body>
 </html>
