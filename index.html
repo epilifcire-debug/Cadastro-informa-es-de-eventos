@@ -8,56 +8,14 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A0F1A">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <style>
-    /* ======= Destaque de Virada ======= */
-    .info-virada {
-      color: #FF5252;
-      font-weight: bold;
-      margin-top: 6px;
-      transition: 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .alerta-virada {
-      animation: piscar 1s infinite alternate;
-    }
-
-    @keyframes piscar {
-      0% { color: #FF5252; transform: scale(1); }
-      100% { color: #FF0000; transform: scale(1.08); }
-    }
-
-    .btn-check {
-      background-color: #4CAF50;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      padding: 6px 10px;
-      margin-left: 10px;
-      transition: 0.3s;
-    }
-
-    .btn-check:hover {
-      background-color: #388E3C;
-    }
-
-    .lote-ok {
-      color: #4CAF50;
-      font-weight: bold;
-    }
-  </style>
 </head>
 
 <body>
   <header>
     <img src="img/logo.png" alt="Logo" class="logo">
     <h1>App de Cadastro de Evento</h1>
+    <!-- Botão de troca de tema -->
+    <button id="themeToggle">☀️ Modo Claro</button>
   </header>
 
   <main>
@@ -158,10 +116,14 @@
   <script src="script.js"></script>
 
   <script>
-    // ======= Formatar data =======
+    // ======= Formatar data no padrão BR =======
     function formatarDataSimples(data) {
       if (!data) return "Não definida";
-      const [ano, mes, dia] = data.split("-");
+      const dateObj = new Date(data);
+      if (isNaN(dateObj)) return data;
+      const dia = String(dateObj.getDate()).padStart(2, '0');
+      const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const ano = dateObj.getFullYear();
       return `${dia}/${mes}/${ano}`;
     }
 
@@ -214,7 +176,7 @@
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(`Data: ${evento.data}`, 10, 30);
+      doc.text(`Data: ${formatarDataSimples(evento.data)}`, 10, 30);
       doc.text(`Local: ${evento.local}`, 10, 38);
       doc.text(`Classificação: ${evento.classificacao || "Não informada"}`, 10, 46);
       doc.text(`Pagamento: ${evento.pagamento || "Não informado"}`, 10, 54);
@@ -312,6 +274,23 @@
         div.appendChild(btnPDF);
       });
     };
+
+    // ======= Troca de tema (claro/escuro) =======
+    const themeButton = document.getElementById("themeToggle");
+    const body = document.body;
+
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light") {
+      body.classList.add("light-mode");
+      themeButton.textContent = "🌙 Modo Escuro";
+    }
+
+    themeButton.addEventListener("click", () => {
+      body.classList.toggle("light-mode");
+      const isLight = body.classList.contains("light-mode");
+      themeButton.textContent = isLight ? "🌙 Modo Escuro" : "☀️ Modo Claro";
+      localStorage.setItem("theme", isLight ? "light" : "dark");
+    });
 
     // ======= Service Worker =======
     if ('serviceWorker' in navigator) {
