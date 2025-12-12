@@ -1,266 +1,158 @@
-/* ======= TEMA PADRÃO (DARK NEON BLUE) ======= */
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(160deg, #0A0F1A, #101B2D);
-  color: #E3F2FD;
-  margin: 0;
-  padding: 0;
-  transition: background 0.5s ease-in-out, color 0.3s ease-in-out;
+// ======= Função de Pagamento compatível =======
+function getPagamento(evento) {
+  return evento.pagamento || evento.formasPagamento || "Não informado";
 }
 
-/* ======= MODO CLARO ======= */
-body.light-mode {
-  background: linear-gradient(160deg, #FFFFFF, #E6F2FF);
-  color: #0A0F1A;
+// ======= Formatar data BR =======
+function formatarDataSimples(data) {
+  if (!data) return "Não definida";
+  const dateObj = new Date(data);
+  if (isNaN(dateObj)) return data;
+  const dia = String(dateObj.getDate()).padStart(2, '0');
+  const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const ano = dateObj.getFullYear();
+  return `${dia}/${mes}/${ano}`;
 }
 
-/* ======= HEADER FIXO ======= */
-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  padding: 15px 25px;
-  background: rgba(15, 23, 42, 0.8);
-  border-bottom: 1px solid rgba(66, 165, 245, 0.3);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  z-index: 999;
-  box-shadow: 0 2px 15px rgba(66, 165, 245, 0.2);
-  transition: background 0.4s ease, color 0.3s ease;
-}
+// ======= Virada de Lote =======
+function definirViradaLote(idEvento) {
+  const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+  const evento = eventos.find(e => e.id === idEvento);
+  if (!evento) return alert("Evento não encontrado.");
 
-body.light-mode header {
-  background: rgba(245, 249, 255, 0.85);
-  border-bottom: 1px solid rgba(21, 101, 192, 0.2);
-  box-shadow: 0 2px 15px rgba(21, 101, 192, 0.15);
-}
+  const novaData = prompt("Digite a data da virada do lote (AAAA-MM-DD):", evento.viradaData || "");
+  if (!novaData) return;
 
-header h1 {
-  margin: 5px 0;
-  font-size: 1.5em;
-  color: #42A5F5;
-  text-shadow: 0 0 10px rgba(66, 165, 245, 0.5);
-}
-
-.logo {
-  width: 90px;
-  margin-bottom: 4px;
-  filter: drop-shadow(0 0 6px #42A5F5);
-  transition: 0.3s;
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
-/* ======= BOTÃO DE TEMA ======= */
-#themeToggle {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  background: linear-gradient(90deg, #42A5F5, #1565C0);
-  color: #fff;
-  font-weight: bold;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 14px;
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(66, 165, 245, 0.4);
-  transition: 0.3s;
-}
-
-#themeToggle:hover {
-  background: linear-gradient(90deg, #64B5F6, #1976D2);
-  box-shadow: 0 0 15px rgba(66, 165, 245, 0.7);
-}
-
-body.light-mode #themeToggle {
-  background: linear-gradient(90deg, #1565C0, #42A5F5);
-  color: white;
-}
-
-/* ======= ESPAÇO PARA HEADER FIXO ======= */
-main {
-  margin-top: 160px;
-}
-
-/* ======= CARDS ======= */
-.card {
-  background: rgba(30, 41, 59, 0.9);
-  padding: 20px;
-  border-radius: 14px;
-  margin: 25px auto;
-  max-width: 900px;
-  box-shadow: 0 4px 25px rgba(66, 165, 245, 0.25);
-  backdrop-filter: blur(8px);
-  transition: transform 0.2s, box-shadow 0.3s, background 0.3s;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 30px rgba(66, 165, 245, 0.35);
-}
-
-body.light-mode .card {
-  background: rgba(255, 255, 255, 0.95);
-  color: #0A0F1A;
-  border: 1px solid #90CAF9;
-  box-shadow: 0 2px 12px rgba(21, 101, 192, 0.15);
-}
-
-/* ======= CAMPOS ======= */
-input, textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #42A5F5;
-  border-radius: 10px;
-  background-color: #0A0F1A;
-  color: #E3F2FD;
-  margin-top: 6px;
-  transition: border 0.3s, box-shadow 0.3s;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #90CAF9;
-  box-shadow: 0 0 8px rgba(66, 165, 245, 0.6);
-}
-
-body.light-mode input, 
-body.light-mode textarea {
-  background: #F8FAFF;
-  border-color: #64B5F6;
-  color: #0A0F1A;
-}
-
-textarea {
-  height: 90px;
-}
-
-/* ======= BOTÕES ======= */
-button {
-  margin-top: 10px;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #42A5F5, #1565C0);
-  color: #0A0F1A;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s ease;
-  box-shadow: 0 0 10px rgba(66, 165, 245, 0.3);
-}
-
-button:hover {
-  background: linear-gradient(90deg, #64B5F6, #1976D2);
-  color: white;
-  box-shadow: 0 0 15px rgba(66, 165, 245, 0.6);
-}
-
-.btn-cancelar, .btn-resetar {
-  background: linear-gradient(90deg, #D32F2F, #9A0007);
-  color: white;
-}
-
-.btn-cancelar:hover, .btn-resetar:hover {
-  background: linear-gradient(90deg, #EF5350, #C62828);
-  box-shadow: 0 0 12px rgba(239, 83, 80, 0.6);
-}
-
-/* ======= EVENTO CARD ======= */
-.evento-card {
-  background: rgba(10, 15, 26, 0.9);
-  border: 1px solid #42A5F5;
-  border-radius: 12px;
-  padding: 12px;
-  margin-top: 15px;
-  box-shadow: 0 0 15px rgba(66, 165, 245, 0.2);
-  transition: 0.3s;
-}
-
-.evento-card:hover {
-  box-shadow: 0 0 25px rgba(66, 165, 245, 0.35);
-  transform: translateY(-2px);
-}
-
-body.light-mode .evento-card {
-  background: rgba(230, 244, 255, 0.9);
-  border-color: #64B5F6;
-}
-
-/* ======= VIRADA DE LOTE ======= */
-.info-virada {
-  color: #FF5252;
-  font-weight: bold;
-  margin-top: 6px;
-  transition: 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.alerta-virada {
-  animation: piscar 1s infinite alternate;
-}
-
-@keyframes piscar {
-  0% {
-    color: #FF5252;
-    transform: scale(1);
-    text-shadow: 0 0 6px rgba(255, 82, 82, 0.8);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(novaData)) {
+    alert("Formato inválido! Use AAAA-MM-DD.");
+    return;
   }
-  100% {
-    color: #FF0000;
-    transform: scale(1.08);
-    text-shadow: 0 0 12px rgba(255, 0, 0, 0.9);
+
+  evento.viradaData = novaData;
+  evento.loteAtualizado = false;
+  localStorage.setItem("eventos", JSON.stringify(eventos));
+  renderEventos();
+  alert("✅ Data de virada de lote salva!");
+}
+
+// ======= Checklist =======
+function marcarLoteAtualizado(idEvento) {
+  const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+  const evento = eventos.find(e => e.id === idEvento);
+  if (!evento) return alert("Evento não encontrado.");
+
+  evento.loteAtualizado = true;
+  localStorage.setItem("eventos", JSON.stringify(eventos));
+
+  const resposta = confirm("✅ Lote marcado como atualizado!\nDeseja definir uma nova data de virada?");
+  if (resposta) definirViradaLote(idEvento);
+  else renderEventos();
+}
+
+// ======= PDF =======
+async function baixarPDF(idEvento) {
+  const { jsPDF } = window.jspdf;
+  const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+  const evento = eventos.find(e => e.id === idEvento);
+  if (!evento) return alert("Evento não encontrado!");
+
+  const doc = new jsPDF();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(evento.nome, 10, 20);
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Data: ${formatarDataSimples(evento.data)}`, 10, 30);
+  doc.text(`Local: ${evento.local}`, 10, 38);
+  doc.text(`Classificação: ${evento.classificacao || "Não informada"}`, 10, 46);
+  doc.text(`Pagamento: ${getPagamento(evento)}`, 10, 54);
+  if (evento.viradaData) doc.text(`Virada de Lote: ${formatarDataSimples(evento.viradaData)}`, 10, 62);
+
+  doc.text("Descrição:", 10, 72);
+  const descricao = evento.descricao || "Nenhuma descrição informada.";
+  const linhasDesc = doc.splitTextToSize(descricao, 180);
+  doc.text(linhasDesc, 10, 78);
+
+  let y = 100;
+  if (evento.lotes?.length) {
+    doc.setFont("helvetica", "bold");
+    doc.text("Lotes e Setores:", 10, y);
+    y += 8;
+    evento.lotes.forEach((lote, i) => {
+      doc.text(`${i + 1}. ${lote.nome}`, 10, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      lote.setores.forEach(s => {
+        doc.text(`- ${s.setor}: Meia ${s.valores.meia} | Solidário ${s.valores.solidario} | Inteira ${s.valores.inteira}`, 12, y);
+        y += 6;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+      y += 4;
+    });
   }
+
+  doc.save(`${evento.nome}.pdf`);
 }
 
-/* ======= BOTÃO CHECKLIST ======= */
-.btn-check {
-  background: linear-gradient(90deg, #4CAF50, #2E7D32);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  padding: 6px 10px;
-  margin-left: 10px;
-  transition: 0.3s;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-}
+// ======= Renderização compatível =======
+const oldRenderEventos = window.renderEventos;
+window.renderEventos = function() {
+  oldRenderEventos();
 
-.btn-check:hover {
-  background: linear-gradient(90deg, #66BB6A, #43A047);
-  box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
-}
+  document.querySelectorAll('.evento-card').forEach(div => {
+    const idText = div.querySelector('button').getAttribute('onclick');
+    const id = Number(idText.match(/\d+/)[0]);
+    const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+    const evento = eventos.find(e => e.id === id);
 
-/* ======= LOTE ATUALIZADO ======= */
-.lote-ok {
-  color: #4CAF50;
-  font-weight: bold;
-  text-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-}
+    const infoVirada = document.createElement('p');
+    infoVirada.classList.add('info-virada');
 
-/* ======= FOOTER ======= */
-footer {
-  text-align: center;
-  padding: 15px;
-  background: #0A0F1A;
-  border-top: 2px solid #42A5F5;
-  color: #90CAF9;
-  margin-top: 40px;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-}
+    let texto = `🔄 Virada de Lote: ${evento?.viradaData ? formatarDataSimples(evento.viradaData) : "Não definida"}`;
 
-body.light-mode footer {
-  background: #E3F2FD;
-  color: #0A0F1A;
-  border-top: 2px solid #64B5F6;
-}
+    if (evento.viradaData) {
+      const hoje = new Date();
+      const virada = new Date(evento.viradaData);
+      const diffDias = Math.ceil((virada - hoje) / (1000 * 60 * 60 * 24));
+
+      if (diffDias <= 3 && diffDias >= 0) {
+        infoVirada.classList.add('alerta-virada');
+        texto = `⚠️ Virada em ${diffDias} dia${diffDias !== 1 ? 's' : ''}! (${formatarDataSimples(evento.viradaData)})`;
+      } else if (diffDias < 0) {
+        texto = `🚨 Lote já virou em ${formatarDataSimples(evento.viradaData)}!`;
+        infoVirada.classList.add('alerta-virada');
+      }
+    }
+
+    if (evento.loteAtualizado) {
+      texto = `✅ Lote atualizado (${evento.viradaData ? formatarDataSimples(evento.viradaData) : "sem data"})`;
+      infoVirada.classList.remove('alerta-virada');
+      infoVirada.classList.add('lote-ok');
+    }
+
+    infoVirada.textContent = texto;
+
+    const btnCheck = document.createElement('button');
+    btnCheck.textContent = '✅';
+    btnCheck.classList.add('btn-check');
+    btnCheck.title = 'Marcar lote como atualizado';
+    btnCheck.onclick = () => marcarLoteAtualizado(id);
+
+    infoVirada.appendChild(btnCheck);
+    div.insertBefore(infoVirada, div.children[3]);
+
+    const btnVirada = document.createElement('button');
+    btnVirada.textContent = 'Virada de Lote';
+    btnVirada.onclick = () => definirViradaLote(id);
+    div.appendChild(btnVirada);
+
+    const btnPDF = document.createElement('button');
+    btnPDF.textContent = 'Baixar PDF';
+    btnPDF.onclick = () => baixarPDF(id);
+    div.appendChild(btnPDF);
+  });
+};
