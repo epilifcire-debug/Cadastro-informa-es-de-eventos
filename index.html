@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A0F1A">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header>
@@ -62,7 +63,7 @@
     <p>Desenvolvido por Eric Filipe</p>
   </footer>
 
-  <!-- MODAL DE EDIÇÃO -->
+  <!-- MODAL DE EDIÇÃO DE EVENTO -->
   <div id="modalEditar" class="modal">
     <div class="modal-content">
       <h2>Editar Evento</h2>
@@ -88,9 +89,95 @@
     </div>
   </div>
 
+  <!-- MODAL DE LOTE -->
+  <div id="modalLote" class="modal">
+    <div class="modal-content">
+      <h2 id="tituloLote">Cadastrar Novo Lote</h2>
+      <form id="formLote">
+        <label>Nome do Lote</label>
+        <input type="text" id="nomeLote" placeholder="Ex: 1º Lote">
+
+        <label>Quantidade de Setores</label>
+        <input type="number" id="qtdSetores" min="1" max="5" value="1">
+
+        <div id="setoresContainer"></div>
+
+        <div class="modal-buttons">
+          <button type="submit">Salvar Lote</button>
+          <button type="button" id="cancelarLote" class="btn-cancelar">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 
   <script>
+    // Função para baixar PDF do evento
+    async function baixarPDF(idEvento) {
+      const { jsPDF } = window.jspdf;
+      const eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+      const evento = eventos.find(e => e.id === idEvento);
+      if (!evento) return alert("Evento não encontrado!");
+
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text(evento.nome, 10, 20);
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Data: ${evento.data}`, 10, 30);
+      doc.text(`Local: ${evento.local}`, 10, 38);
+      doc.text(`Classificação: ${evento.classificacao || "Não informada"}`, 10, 46);
+      doc.text(`Pagamento: ${evento.pagamento || "Não informado"}`, 10, 54);
+
+      doc.text("Descrição:", 10, 64);
+      const descricao = evento.descricao || "Nenhuma descrição informada.";
+      const linhasDesc = doc.splitTextToSize(descricao, 180);
+      doc.text(linhasDesc, 10, 70);
+
+      let y = 90;
+      if (evento.lotes.length) {
+        doc.setFont("helvetica", "bold");
+        doc.text("Lotes e Setores:", 10, y);
+        y += 8;
+        evento.lotes.forEach((lote, i) => {
+          doc.setFont("helvetica", "bold");
+          doc.text(`${i + 1}. ${lote.nome}`, 10, y);
+          y += 6;
+          doc.setFont("helvetica", "normal");
+          lote.setores.forEach(s => {
+            doc.text(`- ${s.setor}: Meia ${s.valores.meia} | Solidário ${s.valores.solidario} | Inteira ${s.valores.inteira}`, 12, y);
+            y += 6;
+            if (y > 270) {
+              doc.addPage();
+              y = 20;
+            }
+          });
+          y += 4;
+        });
+      }
+
+      doc.save(`${evento.nome}.pdf`);
+    }
+
+    // Ajuste: adiciona o botão "Baixar PDF" dinamicamente
+    const oldRenderEventos = window.renderEventos;
+    window.renderEventos = function() {
+      oldRenderEventos();
+      // Inserir botão "Baixar PDF" em cada evento
+      document.querySelectorAll('.evento-card').forEach(div => {
+        const idText = div.querySelector('button').getAttribute('onclick');
+        const id = idText.match(/\d+/)[0];
+        const btn = document.createElement('button');
+        btn.textContent = 'Baixar PDF';
+        btn.onclick = () => baixarPDF(Number(id));
+        div.appendChild(btn);
+      });
+    };
+
     // Registro do Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js')
