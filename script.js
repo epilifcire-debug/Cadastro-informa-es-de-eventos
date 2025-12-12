@@ -196,6 +196,7 @@ function editarNomeLote(id, index) {
     atualizarLista();
   }
 }
+
 function editarQtdLotes(id) {
   const evento = eventos.find((e) => e.id === id);
   const qtd = parseInt(prompt("Nova quantidade de lotes:", evento.lotes.length));
@@ -371,9 +372,6 @@ document.getElementById("btnExportar").onclick = () => {
   a.click();
 };
 
-document.getElementById("btnImportar
-
-// ========================= BACKUP / RESTAURAÇÃO (continuação) =========================
 document.getElementById("btnImportar").onclick = () => {
   const file = document.getElementById("importarBackup").files[0];
   if (!file) return alert("Selecione um arquivo primeiro!");
@@ -415,3 +413,11 @@ document.getElementById("btnResetar").onclick = () => {
 
 // ========================= INICIALIZAR =========================
 atualizarLista();
+
+// ========================= SERVICE WORKER =========================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("./sw.js")
+    .then(() => console.log("✅ Service Worker registrado"))
+    .catch((err) => console.error("⚠️ Erro ao registrar SW:", err));
+}
